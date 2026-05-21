@@ -15,11 +15,13 @@ export async function register(req, res) {
 
         const normalizedEmail = email.trim().toLowerCase();
         const existingUser = await User.findOne({ email: normalizedEmail });
+
         if (existingUser) {
             return res.status(409).json({ error: "Email ja cadastrado" });
         }
 
         const hash = await bcrypt.hash(password, 10);
+
         const user = await User.create({
             name: name.trim(),
             email: normalizedEmail,
@@ -30,13 +32,13 @@ export async function register(req, res) {
         const userObj = user.toObject();
         delete userObj.password;
 
-        res.status(201).json(userObj);
+        return res.status(201).json(userObj);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
 
-export async function login(req, res){
+export async function login(req, res) {
     try {
         const { email, password } = req.body;
 
@@ -45,10 +47,16 @@ export async function login(req, res){
         }
 
         const user = await User.findOne({ email: email.trim().toLowerCase() });
-        if(!user) return res.status(401).json({error: "Usuario nao encontrado"});
+
+        if (!user) {
+            return res.status(401).json({ error: "Usuario nao encontrado" });
+        }
 
         const valid = await bcrypt.compare(password, user.password);
-        if(!valid) return res.status(401).json({error: "Senha incorreta"});
+
+        if (!valid) {
+            return res.status(401).json({ error: "Senha incorreta" });
+        }
 
         const token = jwt.sign(
             { id: user._id, isAdmin: user.isAdmin },
@@ -56,7 +64,7 @@ export async function login(req, res){
             { expiresIn: "1d" }
         );
 
-        res.json({
+        return res.json({
             token,
             user: {
                 id: user._id,
@@ -67,6 +75,45 @@ export async function login(req, res){
             },
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+export async function resetPassword(req, res) {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                error: "Campos obrigatorios: email e password"
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                error: "A senha deve ter pelo menos 6 caracteres"
+            });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const user = await User.findOne({ email: normalizedEmail });
+
+        if (!user) {
+            return res.status(404).json({
+                error: "Usuario nao encontrado"
+            });
+        }
+
+        const hash = await bcrypt.hash(password, 10);
+
+        user.password = hash;
+        await user.save();
+
+        return res.status(200).json({
+            message: "Senha alterada com sucesso"
+        });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
     }
 }

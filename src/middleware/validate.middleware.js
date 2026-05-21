@@ -1,37 +1,32 @@
 import { ZodError } from "zod";
-import AppError from "../utils/appError.js";
 
-export function validate({ body, params, query } = {}) {
+export function validate(schemas = {}) {
   return (req, res, next) => {
     try {
-      if (body) {
-        req.body = body.parse(req.body);
+      if (schemas.params) {
+        req.params = schemas.params.parse(req.params);
       }
 
-      if (params) {
-        req.params = params.parse(req.params);
+      if (schemas.body) {
+        req.body = schemas.body.parse(req.body);
       }
 
-      if (query) {
-        req.query = query.parse(req.query);
+      if (schemas.query) {
+        schemas.query.parse(req.query);
       }
 
-      return next();
+      next();
     } catch (error) {
       if (error instanceof ZodError) {
-        return next(
-          new AppError(
-            "Dados de entrada invalidos",
-            400,
-            error.issues.map((issue) => ({
-              path: issue.path.join("."),
-              message: issue.message,
-            }))
-          )
-        );
+        return res.status(400).json({
+          error: "Dados invalidos",
+          details: error.errors,
+        });
       }
 
-      return next(error);
+      return res.status(400).json({
+        error: error.message,
+      });
     }
   };
 }
