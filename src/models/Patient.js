@@ -31,6 +31,8 @@ const PatientSchema = new mongoose.Schema(
     },
     allergies: {
       type: String,
+      required: true,
+      default: "Nenhuma",
     },
     anamnesis: {
       type: String,
