@@ -1,0 +1,81 @@
+Documentacao de Mudancas - Modulo de Usuarios
+Data: 25/05/2026
+
+Resumo
+- Foi criado um CRUD de usuarios com delete logico.
+- Foi mantida compatibilidade com fallback de banco (MongoDB/SQLite).
+
+Arquivos criados
+- src/controllers/user.controller.js
+- src/routes/user.routes.js
+
+Arquivos alterados
+- src/app.js
+- src/validation/schemas.js
+- src/config/sqliteModel.js
+
+Detalhes por arquivo
+1) src/controllers/user.controller.js
+- createUser:
+  - Normaliza campos name/nome e phone/telefone.
+  - Valida obrigatorios (name, email, password).
+  - Normaliza email para lowercase e trim.
+  - Impede duplicidade de email ativo.
+  - Gera hash de senha com bcrypt.
+  - Salva usuario com ativo=true.
+  - Remove password da resposta.
+
+- getUsers:
+  - Lista por padrao apenas usuarios ativos (ativo=true).
+  - Aceita query includeInactive=true para listar todos.
+  - Remove password da resposta.
+
+- getUserById:
+  - Valida ObjectId.
+  - Busca somente usuario ativo.
+  - Remove password da resposta.
+
+- updateUser:
+  - Valida ObjectId.
+  - Normaliza payload e email.
+  - Impede email duplicado em outro usuario ativo.
+  - Se password vier no payload, re-hash da senha.
+  - Atualiza somente usuario ativo.
+  - Remove password da resposta.
+
+- deleteUser (delete logico):
+  - Valida ObjectId.
+  - Nao remove fisicamente o documento.
+  - Faz update de ativo=true para ativo=false.
+
+2) src/routes/user.routes.js
+- Rotas protegidas por auth middleware.
+- Endpoints adicionados:
+  - POST /api/users
+  - GET /api/users
+  - GET /api/users/:id
+  - PUT /api/users/:id
+  - DELETE /api/users/:id
+- Integracao com validate middleware e schemas Zod.
+
+3) src/validation/schemas.js
+- createUserBodySchema adicionado:
+  - name/nome, email, password, phone/telefone, isAdmin.
+  - Regra de refine para exigir name ou nome.
+
+- updateUserBodySchema adicionado:
+  - Campos opcionais de atualizacao (name/nome, email, password, phone/telefone, isAdmin, ativo).
+
+4) src/app.js
+- Registro da nova rota:
+  - app.use("/api/users", userRoutes)
+
+5) src/config/sqliteModel.js
+- Adicionado findOneAndUpdate para compatibilidade com user.controller.
+- Essa adaptacao garante funcionamento dos updates/delete logico quando a API estiver em fallback SQLite.
+
+Comportamento final
+- Delete logico implementado via campo ativo.
+- Leituras de usuario no novo controller priorizam registros ativos.
+- Senha nunca retorna nas respostas.
+- Fluxo funciona em MongoDB e no fallback SQLite.
