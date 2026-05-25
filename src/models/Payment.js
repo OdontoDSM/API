@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { adaptModel } from "../config/dbAdapter.js";
 
 const PaymentSchema = new mongoose.Schema(
   {
@@ -38,4 +39,4 @@ const PaymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Payment", PaymentSchema);
+export default adaptModel(mongoose.model("Payment", PaymentSchema), "payments");

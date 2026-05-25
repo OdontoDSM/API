@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { adaptModel } from "../config/dbAdapter.js";
 
 const UserSchema = new mongoose.Schema({
     name: {
@@ -26,7 +27,11 @@ const UserSchema = new mongoose.Schema({
     isAdmin: {
         type: Boolean,
         default: false
+    },
+    ativo: {
+        type: Boolean,
+        default: true
     }
 }, { timestamps: true });
 
-export default mongoose.model("User", UserSchema);
+export default adaptModel(mongoose.model("User", UserSchema), "users");

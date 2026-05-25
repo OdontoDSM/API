@@ -38,6 +38,32 @@ export const loginBodySchema = z.object({
   password: z.string().min(1),
 });
 
+export const createUserBodySchema = z
+  .object({
+    name: z.string().trim().min(2).optional(),
+    nome: z.string().trim().min(2).optional(),
+    email: z.string().trim().email(),
+    password: z.string().min(6),
+    phone: z.string().trim().optional(),
+    telefone: z.string().trim().optional(),
+    isAdmin: z.boolean().optional(),
+  })
+  .refine((data) => Boolean(data.name || data.nome), {
+    message: "Informe name ou nome",
+    path: ["name"],
+  });
+
+export const updateUserBodySchema = z.object({
+  name: z.string().trim().min(2).optional(),
+  nome: z.string().trim().min(2).optional(),
+  email: z.string().trim().email().optional(),
+  password: z.string().min(6).optional(),
+  phone: z.string().trim().optional(),
+  telefone: z.string().trim().optional(),
+  isAdmin: z.boolean().optional(),
+  ativo: z.boolean().optional(),
+});
+
 export const createPatientBodySchema = z
   .object({
     name: z.string().trim().min(2).optional(),

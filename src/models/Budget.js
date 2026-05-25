@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { adaptModel } from "../config/dbAdapter.js";
 
 const BudgetSchema = new mongoose.Schema(
   {
@@ -36,4 +37,4 @@ const BudgetSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Budget", BudgetSchema);
+export default adaptModel(mongoose.model("Budget", BudgetSchema), "budgets");

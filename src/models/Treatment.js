@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { adaptModel } from "../config/dbAdapter.js";
 
 const TreatmentSchema = new mongoose.Schema({
     name: {
@@ -14,4 +15,4 @@ const TreatmentSchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
-export default mongoose.model("Treatment", TreatmentSchema);
+export default adaptModel(mongoose.model("Treatment", TreatmentSchema), "treatments");

@@ -8,6 +8,7 @@ import budgetRoutes from "./routes/budget.routes.js";
 import medicalRecordRoutes from "./routes/medicalRecord.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import fileRoutes from "./routes/file.routes.js";
+import userRoutes from "./routes/user.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -22,6 +23,7 @@ app.use("/api/budgets", budgetRoutes);
 app.use("/api/medical-records", medicalRecordRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/files", fileRoutes);
+app.use("/api/users", userRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 

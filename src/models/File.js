@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { adaptModel } from "../config/dbAdapter.js";
 
 const FileSchema = new mongoose.Schema(
   {
@@ -27,4 +28,4 @@ const FileSchema = new mongoose.Schema(
 
 FileSchema.index({ medicalRecord: 1, uploadedAt: -1 });
 
-export default mongoose.model("File", FileSchema);
+export default adaptModel(mongoose.model("File", FileSchema), "files");

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { adaptModel } from "../config/dbAdapter.js";
 
 const AppointmentSchema = new mongoose.Schema({
   patient: {
@@ -38,4 +39,4 @@ const AppointmentSchema = new mongoose.Schema({
 
 AppointmentSchema.index({ patient: 1, dateTime: -1 });
 
-export default mongoose.model("Appointment", AppointmentSchema);
+export default adaptModel(mongoose.model("Appointment", AppointmentSchema), "appointments");
