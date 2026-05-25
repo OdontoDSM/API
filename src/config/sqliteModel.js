@@ -317,6 +317,17 @@ export class SqliteCollection {
     return makeDocument(this._rowToDoc(row), this);
   }
 
+  async insertMany(docs) {
+    const items = Array.isArray(docs) ? docs : [];
+    const created = [];
+
+    for (const doc of items) {
+      created.push(await this.create(doc));
+    }
+
+    return created;
+  }
+
   async findByIdAndUpdate(id, update, options = {}) {
     const row = this._db
       .prepare(`SELECT * FROM "${this._table}" WHERE _id = ?`)
