@@ -102,7 +102,8 @@ export const createAppointment = async (req, res) => {
 
 export const getAppointments = async (req, res) => {
   try {
-    const { patient, user, room, status, startDate, endDate } = req.query;
+    const query = req.validatedQuery ?? req.query;
+    const { patient, user, room, status, startDate, endDate } = query;
 
     const filter = {};
 

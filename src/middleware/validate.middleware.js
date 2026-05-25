@@ -13,7 +13,7 @@ export function validate({ body, params, query } = {}) {
       }
 
       if (query) {
-        req.query = query.parse(req.query);
+        req.validatedQuery = query.parse(req.query);
       }
 
       return next();
