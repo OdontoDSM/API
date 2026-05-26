@@ -1,97 +1,111 @@
-# Levantamento de Funcionalidades e Telas
+# Levantamento de Funcionalidades - API
 
-Data: 25/05/2026
+Data: 26/05/2026
 Escopo analisado: backend Node.js/Express em `src/`
-Metodo: leitura de rotas, controllers, models, middlewares e scripts do projeto.
+Metodo: leitura de rotas, controllers, middlewares, validacoes e scripts.
 
 ## 1) Prontas
 
-### 1.1 Infraestrutura da API
-- Inicializacao do servidor Express com CORS, JSON parser e registro das rotas de dominio.
-- Conexao com banco com tentativa MongoDB Atlas -> MongoDB local -> fallback SQLite.
-- Middleware global de erro e rota nao encontrada.
+### 1.1 Infraestrutura
 
-### 1.2 Autenticacao
-- Cadastro de usuario (`POST /api/auth/register`) com hash de senha.
-- Login (`POST /api/auth/login`) com emissao de JWT.
-- Middleware de autenticacao por Bearer token protegendo os modulos privados.
+- API Express com CORS, parser JSON e tratamento global de erros.
+- Registro de rotas por dominio em `/api/*`.
+- Inicializacao via `src/server.js` com carregamento de `.env`.
 
-### 1.3 Usuarios
-- CRUD de usuarios em `/api/users` protegido por autenticacao.
-- Remocao logica (campo `ativo`) no delete.
-- Sanitizacao para nao retornar senha.
-- Compatibilidade declarada para MongoDB e SQLite (inclusive `findOneAndUpdate` no adaptador SQLite).
+### 1.2 Banco de dados e resiliencia
 
-### 1.4 Pacientes
-- CRUD em `/api/patients` com validacoes de ID nos endpoints por id.
-- Normalizacao de campos `name/nome` e `phone/telefone`.
+- Conexao com tentativa em cascata:
+1. MongoDB Atlas (`MONGO_URI`)
+2. MongoDB local (`MONGO_LOCAL_URI`)
+3. SQLite (`SQLITE_PATH`) como fallback
+- Estado de banco centralizado em `src/config/dbState.js`.
 
-### 1.5 Agendamentos
+### 1.3 Autenticacao
+
+- `POST /api/auth/register` com hash de senha.
+- `POST /api/auth/login` com emissao de JWT.
+- Middleware `auth` por Bearer token para modulos privados.
+
+### 1.4 Usuarios
+
+- CRUD em `/api/users` protegido por autenticacao.
+- Delete logico com campo `ativo`.
+- Senha removida das respostas.
+
+### 1.5 Pacientes
+
+- CRUD em `/api/patients` com validacao de params/body.
+- Normalizacao de campos (`name/nome`, `phone/telefone`).
+
+### 1.6 Agendamentos
+
 - CRUD em `/api/appointments`.
-- Validacoes de conflito de sala/horario e de referencias (paciente/usuario).
+- Validacoes de conflito de sala/horario e referencias.
 - Filtros por paciente, usuario, sala, status e intervalo de datas.
 
-### 1.6 Tratamentos
+### 1.7 Tratamentos
+
 - CRUD em `/api/treatments`.
-- Validacao de preco base e IDs.
+- Validacoes de identificador e preco.
 
-### 1.7 Orcamentos
+### 1.8 Orcamentos
+
 - CRUD em `/api/budgets`.
-- Validacao de paciente/tratamento e filtros.
+- Filtros e validacoes de relacionamento.
 
-### 1.8 Prontuarios
+### 1.9 Prontuarios
+
 - CRUD em `/api/medical-records`.
-- Busca por paciente (`GET /api/medical-records/patient/:patientId`).
-- Restricao de 1 prontuario por paciente.
+- Busca por paciente em `GET /api/medical-records/patient/:patientId`.
+- Regra de um prontuario por paciente.
 
-### 1.9 Pagamentos
+### 1.10 Pagamentos
+
 - CRUD em `/api/payments`.
-- Regras de validacao de valores, desconto e relacionamento com orcamento.
+- Validacoes de valor, desconto e consistencia com orcamento.
 
-### 1.10 Arquivos (metadados)
-- Criacao, listagem, busca por ID e remocao em `/api/files`.
-- Associacao com prontuario medico e filtros.
+### 1.11 Arquivos (metadados)
 
-## 2) Comecadas, mas nao concluidas
+- Criacao/listagem/busca/remocao em `/api/files`.
+- Modelo baseado em metadados e URL de arquivo.
 
-### 2.1 Modulo de arquivos sem upload real
-- O modulo de arquivos hoje salva metadados (`fileType`, `fileUrl`) e nao possui fluxo de upload/armazenamento de arquivo.
-- Status: funcional para referencia por URL, incompleto para gestao de upload nativo.
+## 2) Parcial / Em evolucao
 
-### 2.2 Controle de permissao por perfil
-- Existe campo `isAdmin` no usuario, mas nao ha middlewares/guards de autorizacao por papel (apenas autenticacao).
-- Status: base de permissao iniciada, sem RBAC aplicado nas rotas.
+### 2.1 Upload fisico de arquivos
+
+- O modulo de arquivos nao recebe binario nem faz armazenamento local/cloud.
+- Estado atual: apenas metadados (`fileType`, `fileUrl`, referencias).
+
+### 2.2 Autorizacao por perfil (RBAC)
+
+- Existe base de perfil (`isAdmin`), mas sem regras por rota.
+- Estado atual: controle de acesso apenas por autenticacao.
 
 ### 2.3 Testes automatizados
-- Script `npm test` ainda esta como placeholder (`"Error: no test specified"`).
-- Status: estrutura de projeto pronta, cobertura de testes nao implementada.
 
-### 2.4 Documentacao principal do projeto
-- `README.md` esta praticamente vazio (apenas titulo).
-- Status: documentacao iniciada, sem instrucoes de setup/uso/endpoints.
+- Script de teste ainda placeholder no `package.json`.
+- Estado atual: sem suite automatizada de testes.
 
-## 3) Ainda nao comecado
+## 3) Rotas mapeadas
 
-### 3.1 Telas do sistema (frontend)
-- Nao ha projeto frontend no workspace (React, Vue, Angular, HTML views etc.).
-- Portanto, nao existem telas implementadas neste repositorio.
+### Publicas
 
-Telas identificadas no estado atual:
-- Nenhuma tela implementada.
+- `POST /api/auth/register`
+- `POST /api/auth/login`
 
-## 4) Inventario resumido por modulo
+### Protegidas
 
-- Auth: pronto (register/login JWT).
-- Usuarios: pronto (CRUD + delete logico).
-- Pacientes: pronto (CRUD).
-- Agendamentos: pronto (CRUD + conflito de sala/horario).
-- Tratamentos: pronto (CRUD).
-- Orcamentos: pronto (CRUD).
-- Prontuarios: pronto (CRUD + busca por paciente).
-- Pagamentos: pronto (CRUD + validacoes de soma).
-- Arquivos: parcial (metadados prontos, upload real nao iniciado).
-- Telas frontend: nao iniciado.
+- `GET|POST|PUT|DELETE /api/users`
+- `GET|POST|PUT|DELETE /api/patients`
+- `GET|POST|PUT|DELETE /api/appointments`
+- `GET|POST|PUT|DELETE /api/treatments`
+- `GET|POST|PUT|DELETE /api/budgets`
+- `GET|POST|PUT|DELETE /api/medical-records`
+- `GET|POST|PUT|DELETE /api/payments`
+- `GET|POST|DELETE /api/files`
 
-## 5) Observacao importante
+## 4) Resumo executivo
 
-A classificacao acima considera o que esta efetivamente presente no codigo atual do repositorio. Ela nao pressupoe requisitos externos adicionais que nao estejam no projeto.
+- O backend esta funcional para o fluxo principal do produto (autenticacao, pacientes e agenda).
+- Existem modulos de apoio clinico-financeiro implementados com validacao.
+- Os principais gaps atuais sao upload real de arquivo, RBAC e testes automatizados.
