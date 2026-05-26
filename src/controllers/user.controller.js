@@ -6,6 +6,7 @@ function normalizeUserPayload(payload = {}) {
   const normalized = {
     ...payload,
     name: payload.name || payload.nome,
+    cpf: payload.cpf,
     phone: payload.phone || payload.telefone,
   };
 
@@ -22,15 +23,24 @@ function sanitizeUser(userDoc) {
   return user;
 }
 
+function normalizeCpf(cpf = "") {
+  return String(cpf).replace(/\D/g, "").trim();
+}
+
 export const createUser = async (req, res) => {
   try {
     const payload = normalizeUserPayload(req.body);
     const { name, email, password, phone, isAdmin } = payload;
+    const cpf = normalizeCpf(payload.cpf);
 
-    if (!name || !email || !password) {
+    if (!name || !cpf || !email || !password) {
       return res
         .status(400)
-        .json({ error: "Campos obrigatorios: name, email e password" });
+        .json({ error: "Campos obrigatorios: name, cpf, email e password" });
+    }
+
+    if (cpf.length !== 11) {
+      return res.status(400).json({ error: "CPF invalido" });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -39,9 +49,15 @@ export const createUser = async (req, res) => {
       return res.status(409).json({ error: "Email ja cadastrado" });
     }
 
+    const existingCpf = await User.findOne({ cpf });
+    if (existingCpf) {
+      return res.status(409).json({ error: "CPF ja cadastrado" });
+    }
+
     const hash = await bcrypt.hash(password, 10);
     const user = await User.create({
       name: name.trim(),
+      cpf,
       email: normalizedEmail,
       password: hash,
       phone,
@@ -95,6 +111,21 @@ export const updateUser = async (req, res) => {
     }
 
     const payload = normalizeUserPayload(req.body);
+
+    if (payload.cpf !== undefined) {
+      payload.cpf = normalizeCpf(payload.cpf);
+      if (payload.cpf.length !== 11) {
+        return res.status(400).json({ error: "CPF invalido" });
+      }
+
+      const existingCpf = await User.findOne({
+        cpf: payload.cpf,
+        _id: { $ne: id },
+      });
+      if (existingCpf) {
+        return res.status(409).json({ error: "CPF ja cadastrado" });
+      }
+    }
 
     if (payload.email) {
       payload.email = payload.email.trim().toLowerCase();

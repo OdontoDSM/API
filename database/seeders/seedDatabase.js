@@ -42,6 +42,7 @@ export async function seedDatabase(options = {}) {
   const users = await User.insertMany([
     makeUser({
       name: "Admin OdontoCare",
+      cpf: "11111111111",
       email: "admin@admin.com",
       password: defaultPasswordHash,
       isAdmin: true,

@@ -8,6 +8,12 @@ const UserSchema = new mongoose.Schema({
         trim: true,
         alias: "nome"
     },
+    cpf: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+    },
     email: {
         type: String,
         required: true,

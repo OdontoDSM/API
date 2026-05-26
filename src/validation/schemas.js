@@ -23,6 +23,7 @@ export const registerBodySchema = z
   .object({
     name: z.string().trim().min(2).optional(),
     nome: z.string().trim().min(2).optional(),
+    cpf: z.string().trim().min(11),
     email: z.string().trim().email(),
     password: z.string().min(6),
     phone: z.string().trim().optional(),
@@ -38,10 +39,17 @@ export const loginBodySchema = z.object({
   password: z.string().min(1),
 });
 
+export const forgotPasswordBodySchema = z.object({
+  email: z.string().trim().email(),
+  cpf: z.string().trim().min(11),
+  newPassword: z.string().min(6),
+});
+
 export const createUserBodySchema = z
   .object({
     name: z.string().trim().min(2).optional(),
     nome: z.string().trim().min(2).optional(),
+    cpf: z.string().trim().min(11),
     email: z.string().trim().email(),
     password: z.string().min(6),
     phone: z.string().trim().optional(),
@@ -56,6 +64,7 @@ export const createUserBodySchema = z
 export const updateUserBodySchema = z.object({
   name: z.string().trim().min(2).optional(),
   nome: z.string().trim().min(2).optional(),
+  cpf: z.string().trim().min(11).optional(),
   email: z.string().trim().email().optional(),
   password: z.string().min(6).optional(),
   phone: z.string().trim().optional(),
