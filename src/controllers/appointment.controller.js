@@ -172,9 +172,14 @@ export const getAppointmentById = async (req, res) => {
       return res.status(400).json({ error: "ID de agendamento invalido" });
     }
 
-    const appointment = await Appointment.findById(id)
-      .populate("patient", "name cpf phone")
-      .populate("user", "name email");
+    let appointment = await Appointment.findById(id);
+
+    if (appointment && typeof appointment.populate === "function") {
+      appointment = await appointment.populate([
+        { path: "patient", select: "name cpf phone" },
+        { path: "user", select: "name email" },
+      ]);
+    }
 
     if (!appointment) {
       return res.status(404).json({ error: "Agendamento nao encontrado" });
@@ -247,7 +252,7 @@ export const updateAppointment = async (req, res) => {
       }
     }
 
-    const updated = await Appointment.findByIdAndUpdate(
+    let updated = await Appointment.findByIdAndUpdate(
       id,
       {
         ...req.body,
@@ -255,9 +260,14 @@ export const updateAppointment = async (req, res) => {
         dateTime: nextDateTime,
       },
       { new: true, runValidators: true }
-    )
-      .populate("patient", "name cpf phone")
-      .populate("user", "name email");
+    );
+
+    if (updated && typeof updated.populate === "function") {
+      updated = await updated.populate([
+        { path: "patient", select: "name cpf phone" },
+        { path: "user", select: "name email" },
+      ]);
+    }
 
     return res.status(200).json(updated);
   } catch (error) {

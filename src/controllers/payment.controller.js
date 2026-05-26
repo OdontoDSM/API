@@ -108,11 +108,15 @@ export const getPaymentById = async (req, res) => {
       return res.status(400).json({ error: "ID de pagamento invalido" });
     }
 
-    const payment = await Payment.findById(id).populate({
-      path: "budget",
-      select: "totalPrice paymentMethod status",
-      populate: { path: "patient", select: "name cpf" },
-    });
+    let payment = await Payment.findById(id);
+
+    if (payment && typeof payment.populate === "function") {
+      payment = await payment.populate({
+        path: "budget",
+        select: "totalPrice paymentMethod status",
+        populate: { path: "patient", select: "name cpf" },
+      });
+    }
 
     if (!payment) {
       return res.status(404).json({ error: "Pagamento nao encontrado" });
@@ -140,14 +144,18 @@ export const updatePayment = async (req, res) => {
       }
     }
 
-    const payment = await Payment.findByIdAndUpdate(id, req.body, {
+    let payment = await Payment.findByIdAndUpdate(id, req.body, {
       new: true,
       runValidators: true,
-    }).populate({
-      path: "budget",
-      select: "totalPrice paymentMethod status",
-      populate: { path: "patient", select: "name cpf" },
     });
+
+    if (payment && typeof payment.populate === "function") {
+      payment = await payment.populate({
+        path: "budget",
+        select: "totalPrice paymentMethod status",
+        populate: { path: "patient", select: "name cpf" },
+      });
+    }
 
     if (!payment) {
       return res.status(404).json({ error: "Pagamento nao encontrado" });

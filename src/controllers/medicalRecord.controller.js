@@ -59,10 +59,14 @@ export const getMedicalRecordById = async (req, res) => {
       return res.status(400).json({ error: "ID de prontuario invalido" });
     }
 
-    const record = await MedicalRecord.findById(id).populate(
-      "patient",
-      "name cpf phone birthDate allergies medicalNotes anamnesis emergencyContact"
-    );
+    let record = await MedicalRecord.findById(id);
+
+    if (record && typeof record.populate === "function") {
+      record = await record.populate(
+        "patient",
+        "name cpf phone birthDate allergies medicalNotes anamnesis emergencyContact"
+      );
+    }
 
     if (!record) {
       return res.status(404).json({ error: "Prontuario nao encontrado" });
@@ -107,10 +111,14 @@ export const updateMedicalRecord = async (req, res) => {
 
     const { patient, ...updateData } = req.body;
 
-    const record = await MedicalRecord.findByIdAndUpdate(id, updateData, {
+    let record = await MedicalRecord.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
-    }).populate("patient", "name cpf phone birthDate");
+    });
+
+    if (record && typeof record.populate === "function") {
+      record = await record.populate("patient", "name cpf phone birthDate");
+    }
 
     if (!record) {
       return res.status(404).json({ error: "Prontuario nao encontrado" });

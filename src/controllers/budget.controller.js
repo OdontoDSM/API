@@ -95,9 +95,14 @@ export const getBudgetById = async (req, res) => {
       return res.status(400).json({ error: "ID de orcamento invalido" });
     }
 
-    const budget = await Budget.findById(id)
-      .populate("patient", "name cpf phone")
-      .populate("treatment", "name basePrice description");
+    let budget = await Budget.findById(id);
+
+    if (budget && typeof budget.populate === "function") {
+      budget = await budget.populate([
+        { path: "patient", select: "name cpf phone" },
+        { path: "treatment", select: "name basePrice description" },
+      ]);
+    }
 
     if (!budget) {
       return res.status(404).json({ error: "Orcamento nao encontrado" });
@@ -133,12 +138,17 @@ export const updateBudget = async (req, res) => {
       }
     }
 
-    const budget = await Budget.findByIdAndUpdate(id, req.body, {
+    let budget = await Budget.findByIdAndUpdate(id, req.body, {
       new: true,
       runValidators: true,
-    })
-      .populate("patient", "name cpf phone")
-      .populate("treatment", "name basePrice");
+    });
+
+    if (budget && typeof budget.populate === "function") {
+      budget = await budget.populate([
+        { path: "patient", select: "name cpf phone" },
+        { path: "treatment", select: "name basePrice" },
+      ]);
+    }
 
     if (!budget) {
       return res.status(404).json({ error: "Orcamento nao encontrado" });

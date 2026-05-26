@@ -73,11 +73,15 @@ export const getFileById = async (req, res) => {
       return res.status(400).json({ error: "ID de arquivo invalido" });
     }
 
-    const file = await File.findById(id).populate({
-      path: "medicalRecord",
-      select: "patient",
-      populate: { path: "patient", select: "name cpf" },
-    });
+    let file = await File.findById(id);
+
+    if (file && typeof file.populate === "function") {
+      file = await file.populate({
+        path: "medicalRecord",
+        select: "patient",
+        populate: { path: "patient", select: "name cpf" },
+      });
+    }
 
     if (!file) {
       return res.status(404).json({ error: "Arquivo nao encontrado" });
