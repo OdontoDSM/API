@@ -37,7 +37,7 @@ export async function seedDatabase(options = {}) {
   await clearDatabase();
 
   const users = await User.insertMany([
-    makeUser({ name: "Admin OdontoCare", email: "admin@odontocare.local", password: "123456", isAdmin: true }),
+    makeUser({ name: "Admin OdontoCare", email: "admin@admin.com", password: "123456", isAdmin: true }),
     ...Array.from({ length: counts.users - 1 }, (_, index) =>
       makeUser({
         password: "123456",

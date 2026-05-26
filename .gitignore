@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Runtime and logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.exemple
+
+# Database and local data
+database.sqlite
+*.sqlite
+*.sqlite3
+
+# Build and coverage
+coverage/
+dist/
+build/
+
+# Caches and temp
+.cache/
+.tmp/
+tmp/
+
+# Editor and OS
+.vscode/
+.DS_Store
+Thumbs.db
