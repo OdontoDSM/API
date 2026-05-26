@@ -25,11 +25,19 @@ async function tryMongoConnect(uri, label) {
 }
 
 async function initSqlite() {
-  const { default: Database } = await import("better-sqlite3");
-  const db = new Database(SQLITE_PATH);
-  dbState.type = "sqlite";
-  dbState.sqlite = db;
-  console.log(`[DB] Fallback: usando SQLite em "${SQLITE_PATH}".`);
+  try {
+    const { default: Database } = await import("better-sqlite3");
+    const db = new Database(SQLITE_PATH);
+    dbState.type = "sqlite";
+    dbState.sqlite = db;
+    console.log(`[DB] Fallback: usando SQLite em "${SQLITE_PATH}".`);
+  } catch (err) {
+    const details = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[DB] Fallback SQLite falhou: ${details}. Verifique se as dependencias da pasta API foram instaladas e se a versao do Node do ambiente e compativel com better-sqlite3.`
+    );
+    throw err;
+  }
 }
 
 export async function connectDB() {

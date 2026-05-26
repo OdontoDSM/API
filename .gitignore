@@ -20,6 +20,10 @@ database.sqlite
 *.sqlite
 *.sqlite3
 
+# Uploaded files
+uploads/
+!uploads/.gitkeep
+
 # Build and coverage
 coverage/
 dist/
