@@ -205,6 +205,11 @@ export const createFileBodySchema = z.object({
   fileUrl: z.string().trim().min(1),
 });
 
+export const createFileUploadBodySchema = z.object({
+  medicalRecord: objectIdSchema,
+  fileType: z.enum(["Exame", "Radiografia", "Foto"]),
+});
+
 export const fileQuerySchema = z.object({
   medicalRecord: objectIdSchema.optional(),
   fileType: z.enum(["Exame", "Radiografia", "Foto"]).optional(),
