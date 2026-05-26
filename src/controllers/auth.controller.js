@@ -25,6 +25,7 @@ export async function register(req, res) {
             email: normalizedEmail,
             password: hash,
             phone,
+            ativo: true,
         });
 
         const userObj = user.toObject();
@@ -47,7 +48,21 @@ export async function login(req, res){
         const user = await User.findOne({ email: email.trim().toLowerCase() });
         if(!user) return res.status(401).json({error: "Usuario nao encontrado"});
 
-        const valid = await bcrypt.compare(password, user.password);
+        // Compatibilidade com registros legados criados com senha em texto puro
+        // (ex.: seeds antigos sem hash). Se bater, migra para hash no login.
+        let valid = false;
+        if (typeof user.password === "string") {
+            if (user.password.startsWith("$2a$") || user.password.startsWith("$2b$") || user.password.startsWith("$2y$")) {
+                valid = await bcrypt.compare(password, user.password);
+            } else {
+                valid = password === user.password;
+                if (valid) {
+                    const migratedHash = await bcrypt.hash(password, 10);
+                    await User.findOneAndUpdate({ _id: user._id }, { password: migratedHash });
+                }
+            }
+        }
+
         if(!valid) return res.status(401).json({error: "Senha incorreta"});
 
         const token = jwt.sign(

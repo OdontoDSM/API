@@ -6,6 +6,7 @@ import Patient from "../../src/models/Patient.js";
 import Payment from "../../src/models/Payment.js";
 import Treatment from "../../src/models/Treatment.js";
 import User from "../../src/models/User.js";
+import bcrypt from "bcryptjs";
 import { clearDatabase } from "./clearDatabase.js";
 import { makeAppointment } from "../factories/appointmentFactory.js";
 import { makeBudget } from "../factories/budgetFactory.js";
@@ -36,12 +37,21 @@ export async function seedDatabase(options = {}) {
 
   await clearDatabase();
 
+  const defaultPasswordHash = await bcrypt.hash("123456", 10);
+
   const users = await User.insertMany([
-    makeUser({ name: "Admin OdontoCare", email: "admin@admin.com", password: "123456", isAdmin: true }),
+    makeUser({
+      name: "Admin OdontoCare",
+      email: "admin@admin.com",
+      password: defaultPasswordHash,
+      isAdmin: true,
+      ativo: true,
+    }),
     ...Array.from({ length: counts.users - 1 }, (_, index) =>
       makeUser({
-        password: "123456",
+        password: defaultPasswordHash,
         isAdmin: index % 4 === 0,
+        ativo: true,
       })
     ),
   ]);

@@ -34,7 +34,7 @@ export const createUser = async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail, ativo: true });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(409).json({ error: "Email ja cadastrado" });
     }
@@ -101,7 +101,6 @@ export const updateUser = async (req, res) => {
       const existingUser = await User.findOne({
         email: payload.email,
         _id: { $ne: id },
-        ativo: true,
       });
       if (existingUser) {
         return res.status(409).json({ error: "Email ja cadastrado" });
