@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Budget from "../models/Budget.js";
 import Patient from "../models/Patient.js";
 import Treatment from "../models/Treatment.js";
+import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
 
 export const createBudget = async (req, res) => {
   try {
@@ -54,7 +55,7 @@ export const createBudget = async (req, res) => {
       { path: "treatment", select: "name basePrice" },
     ]);
 
-    return res.status(201).json(populated);
+    return res.status(201).json(serializeWithDecryptedCpf(populated));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -81,7 +82,7 @@ export const getBudgets = async (req, res) => {
       .populate("patient", "name cpf phone")
       .populate("treatment", "name basePrice");
 
-    return res.status(200).json(budgets);
+    return res.status(200).json(serializeWithDecryptedCpf(budgets));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -108,7 +109,7 @@ export const getBudgetById = async (req, res) => {
       return res.status(404).json({ error: "Orcamento nao encontrado" });
     }
 
-    return res.status(200).json(budget);
+    return res.status(200).json(serializeWithDecryptedCpf(budget));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -154,7 +155,7 @@ export const updateBudget = async (req, res) => {
       return res.status(404).json({ error: "Orcamento nao encontrado" });
     }
 
-    return res.status(200).json(budget);
+    return res.status(200).json(serializeWithDecryptedCpf(budget));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

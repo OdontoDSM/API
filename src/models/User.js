@@ -11,8 +11,13 @@ const UserSchema = new mongoose.Schema({
     cpf: {
         type: String,
         required: true,
-        unique: true,
         trim: true,
+    },
+    cpfHash: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true,
     },
     email: {
         type: String,

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Appointment from "../models/Appointments.js";
 import Patient from "../models/Patient.js";
 import User from "../models/User.js";
+import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
 
 function isValidObjectId(value) {
   return mongoose.isValidObjectId(value);
@@ -94,7 +95,7 @@ export const createAppointment = async (req, res) => {
       { path: "user", select: "name email" },
     ]);
 
-    return res.status(201).json(populated);
+    return res.status(201).json(serializeWithDecryptedCpf(populated));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -158,7 +159,7 @@ export const getAppointments = async (req, res) => {
       .populate("patient", "name cpf phone")
       .populate("user", "name email");
 
-    return res.status(200).json(appointments);
+    return res.status(200).json(serializeWithDecryptedCpf(appointments));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -185,7 +186,7 @@ export const getAppointmentById = async (req, res) => {
       return res.status(404).json({ error: "Agendamento nao encontrado" });
     }
 
-    return res.status(200).json(appointment);
+    return res.status(200).json(serializeWithDecryptedCpf(appointment));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -269,7 +270,7 @@ export const updateAppointment = async (req, res) => {
       ]);
     }
 
-    return res.status(200).json(updated);
+    return res.status(200).json(serializeWithDecryptedCpf(updated));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

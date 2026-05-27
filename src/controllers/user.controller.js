@@ -4,6 +4,12 @@ import fs from "fs/promises";
 import path from "path";
 import User from "../models/User.js";
 import { uploadsDir } from "../middleware/upload.middleware.js";
+import {
+  buildSecuredCpf,
+  hashCpf,
+  normalizeCpf,
+  serializeWithDecryptedCpf,
+} from "../utils/cpfCrypto.js";
 
 function normalizeUserPayload(payload = {}) {
   const normalized = {
@@ -23,11 +29,7 @@ function sanitizeUser(userDoc) {
   if (!userDoc) return null;
   const user = typeof userDoc.toObject === "function" ? userDoc.toObject() : userDoc;
   delete user.password;
-  return user;
-}
-
-function normalizeCpf(cpf = "") {
-  return String(cpf).replace(/\D/g, "").trim();
+  return serializeWithDecryptedCpf(user);
 }
 
 function buildPublicUploadUrl(req, uploadedFile) {
@@ -86,15 +88,22 @@ export const createUser = async (req, res) => {
       return res.status(409).json({ error: "Email ja cadastrado" });
     }
 
-    const existingCpf = await User.findOne({ cpf });
+    const cpfHash = hashCpf(cpf);
+    let existingCpf = await User.findOne({ cpfHash });
+    if (!existingCpf) {
+      existingCpf = await User.findOne({ cpf });
+    }
     if (existingCpf) {
       return res.status(409).json({ error: "CPF ja cadastrado" });
     }
 
+    const securedCpf = buildSecuredCpf(cpf);
+
     const hash = await bcrypt.hash(password, 10);
     const user = await User.create({
       name: name.trim(),
-      cpf,
+      cpf: securedCpf.cpf,
+      cpfHash: securedCpf.cpfHash,
       email: normalizedEmail,
       password: hash,
       phone,
@@ -150,18 +159,32 @@ export const updateUser = async (req, res) => {
     const payload = normalizeUserPayload(req.body);
 
     if (payload.cpf !== undefined) {
-      payload.cpf = normalizeCpf(payload.cpf);
-      if (payload.cpf.length !== 11) {
+      const cpf = normalizeCpf(payload.cpf);
+      if (cpf.length !== 11) {
         return res.status(400).json({ error: "CPF invalido" });
       }
 
-      const existingCpf = await User.findOne({
-        cpf: payload.cpf,
+      const cpfHash = hashCpf(cpf);
+
+      let existingCpf = await User.findOne({
+        cpfHash,
         _id: { $ne: id },
       });
+
+      if (!existingCpf) {
+        existingCpf = await User.findOne({
+          cpf,
+          _id: { $ne: id },
+        });
+      }
+
       if (existingCpf) {
         return res.status(409).json({ error: "CPF ja cadastrado" });
       }
+
+      const securedCpf = buildSecuredCpf(cpf);
+      payload.cpf = securedCpf.cpf;
+      payload.cpfHash = securedCpf.cpfHash;
     }
 
     if (payload.email) {

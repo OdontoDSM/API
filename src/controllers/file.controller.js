@@ -4,6 +4,7 @@ import path from "path";
 import File from "../models/File.js";
 import MedicalRecord from "../models/MedicalRecord.js";
 import { uploadsDir } from "../middleware/upload.middleware.js";
+import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
 
 function buildPublicFileUrl(req, uploadedFile) {
   const absolutePath = uploadedFile.path
@@ -83,7 +84,7 @@ export const createFile = async (req, res) => {
       populate: { path: "patient", select: "name cpf" },
     });
 
-    return res.status(201).json(populated);
+    return res.status(201).json(serializeWithDecryptedCpf(populated));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -113,7 +114,7 @@ export const getFiles = async (req, res) => {
         populate: { path: "patient", select: "name cpf" },
       });
 
-    return res.status(200).json(files);
+    return res.status(200).json(serializeWithDecryptedCpf(files));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -141,7 +142,7 @@ export const getFileById = async (req, res) => {
       return res.status(404).json({ error: "Arquivo nao encontrado" });
     }
 
-    return res.status(200).json(file);
+    return res.status(200).json(serializeWithDecryptedCpf(file));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

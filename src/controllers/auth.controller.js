@@ -1,10 +1,12 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-function normalizeCpf(cpf = "") {
-    return String(cpf).replace(/\D/g, "").trim();
-}
+import {
+    buildSecuredCpf,
+    hashCpf,
+    normalizeCpf,
+    serializeWithDecryptedCpf,
+} from "../utils/cpfCrypto.js";
 
 export async function register(req, res) {
     try {
@@ -28,15 +30,23 @@ export async function register(req, res) {
             return res.status(409).json({ error: "Email ja cadastrado" });
         }
 
-        const existingCpf = await User.findOne({ cpf });
+        const cpfHash = hashCpf(cpf);
+        let existingCpf = await User.findOne({ cpfHash });
+        if (!existingCpf) {
+            // Compatibilidade com base legada que ainda armazenava CPF em texto puro
+            existingCpf = await User.findOne({ cpf });
+        }
         if (existingCpf) {
             return res.status(409).json({ error: "CPF ja cadastrado" });
         }
 
+        const securedCpf = buildSecuredCpf(cpf);
+
         const hash = await bcrypt.hash(password, 10);
         const user = await User.create({
             name: name.trim(),
-            cpf,
+            cpf: securedCpf.cpf,
+            cpfHash: securedCpf.cpfHash,
             email: normalizedEmail,
             password: hash,
             phone,
@@ -46,7 +56,7 @@ export async function register(req, res) {
         const userObj = user.toObject();
         delete userObj.password;
 
-        res.status(201).json(userObj);
+        res.status(201).json(serializeWithDecryptedCpf(userObj));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -91,7 +101,7 @@ export async function login(req, res){
             user: {
                 id: user._id,
                 name: user.name,
-                cpf: user.cpf,
+                cpf: normalizeCpf(user.cpf),
                 email: user.email,
                 phone: user.phone,
                 isAdmin: user.isAdmin,

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Payment from "../models/Payment.js";
 import Budget from "../models/Budget.js";
+import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
 
 export const createPayment = async (req, res) => {
   try {
@@ -64,7 +65,7 @@ export const createPayment = async (req, res) => {
       populate: { path: "patient", select: "name cpf" },
     });
 
-    return res.status(201).json(populated);
+    return res.status(201).json(serializeWithDecryptedCpf(populated));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -94,7 +95,7 @@ export const getPayments = async (req, res) => {
         populate: { path: "patient", select: "name cpf" },
       });
 
-    return res.status(200).json(payments);
+    return res.status(200).json(serializeWithDecryptedCpf(payments));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -122,7 +123,7 @@ export const getPaymentById = async (req, res) => {
       return res.status(404).json({ error: "Pagamento nao encontrado" });
     }
 
-    return res.status(200).json(payment);
+    return res.status(200).json(serializeWithDecryptedCpf(payment));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -161,7 +162,7 @@ export const updatePayment = async (req, res) => {
       return res.status(404).json({ error: "Pagamento nao encontrado" });
     }
 
-    return res.status(200).json(payment);
+    return res.status(200).json(serializeWithDecryptedCpf(payment));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

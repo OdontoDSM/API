@@ -10,7 +10,12 @@ const PatientSchema = new mongoose.Schema(
     cpf: {
       type: String,
       required: true,
+    },
+    cpfHash: {
+      type: String,
       unique: true,
+      sparse: true,
+      index: true,
     },
     birthDate: {
       type: Date,

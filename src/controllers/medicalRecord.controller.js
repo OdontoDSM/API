@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import MedicalRecord from "../models/MedicalRecord.js";
 import Patient from "../models/Patient.js";
+import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
 
 export const createMedicalRecord = async (req, res) => {
   try {
@@ -33,7 +34,7 @@ export const createMedicalRecord = async (req, res) => {
     });
 
     const populated = await record.populate("patient", "name cpf phone birthDate");
-    return res.status(201).json(populated);
+    return res.status(201).json(serializeWithDecryptedCpf(populated));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -45,7 +46,7 @@ export const getMedicalRecords = async (req, res) => {
       .sort({ updatedAt: -1 })
       .populate("patient", "name cpf phone");
 
-    return res.status(200).json(records);
+    return res.status(200).json(serializeWithDecryptedCpf(records));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -72,7 +73,7 @@ export const getMedicalRecordById = async (req, res) => {
       return res.status(404).json({ error: "Prontuario nao encontrado" });
     }
 
-    return res.status(200).json(record);
+    return res.status(200).json(serializeWithDecryptedCpf(record));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -95,7 +96,7 @@ export const getMedicalRecordByPatient = async (req, res) => {
       return res.status(404).json({ error: "Prontuario nao encontrado para este paciente" });
     }
 
-    return res.status(200).json(record);
+    return res.status(200).json(serializeWithDecryptedCpf(record));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -124,7 +125,7 @@ export const updateMedicalRecord = async (req, res) => {
       return res.status(404).json({ error: "Prontuario nao encontrado" });
     }
 
-    return res.status(200).json(record);
+    return res.status(200).json(serializeWithDecryptedCpf(record));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

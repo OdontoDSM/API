@@ -32,6 +32,7 @@ cp .env.exemple .env
 - `MONGO_URI`: conexão MongoDB Atlas (opcional)
 - `MONGO_LOCAL_URI`: conexão MongoDB local (opcional)
 - `SQLITE_PATH`: caminho do arquivo SQLite de fallback
+- `CPF_ENCRYPTION_KEY`: chave usada para criptografar CPF em repouso
 
 ## Instalação
 
@@ -44,6 +45,7 @@ npm install
 - `npm run dev`: inicia API com nodemon
 - `npm start`: inicia API em modo normal
 - `npm run seed`: popula base com dados de teste
+- `npm run migrate:cpf`: migra CPFs legados para formato criptografado + hash
 
 ## Fluxo de banco de dados
 
