@@ -9,6 +9,9 @@ import {
 
 const router = Router();
 
+router.get("/test", (req, res) => {
+  res.json({ message: "Auth route is working!" });
+});
 router.post("/register", validate({ body: registerBodySchema }), register);
 router.post("/login", validate({ body: loginBodySchema }), login);
 router.post("/forgot-password", validate({ body: forgotPasswordBodySchema }), forgotPassword);
