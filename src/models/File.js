@@ -17,6 +17,18 @@ const FileSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    fileName: {
+      type: String,
+      trim: true,
+    },
+    mimeType: {
+      type: String,
+      trim: true,
+    },
+    fileSize: {
+      type: Number,
+      min: 0,
+    },
     uploadedAt: {
       type: Date,
       default: Date.now,

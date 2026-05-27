@@ -51,6 +51,25 @@ function buildResponse(error) {
     };
   }
 
+  if (error?.name === "MulterError") {
+    return {
+      statusCode: 400,
+      payload: {
+        error:
+          error.code === "LIMIT_FILE_SIZE"
+            ? "Arquivo excede o limite de 10MB"
+            : "Erro ao processar upload",
+      },
+    };
+  }
+
+  if (typeof error?.message === "string" && error.message.includes("Tipo de arquivo nao suportado")) {
+    return {
+      statusCode: 400,
+      payload: { error: error.message },
+    };
+  }
+
   return {
     statusCode: 500,
     payload: { error: "Erro interno do servidor" },

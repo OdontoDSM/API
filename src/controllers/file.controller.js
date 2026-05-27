@@ -1,19 +1,66 @@
 import mongoose from "mongoose";
+import fs from "fs/promises";
+import path from "path";
 import File from "../models/File.js";
 import MedicalRecord from "../models/MedicalRecord.js";
+import { uploadsDir } from "../middleware/upload.middleware.js";
+
+function buildPublicFileUrl(req, uploadedFile) {
+  const absolutePath = uploadedFile.path
+    || path.join(uploadedFile.destination || uploadsDir, uploadedFile.filename);
+
+  const relativePath = path
+    .relative(uploadsDir, absolutePath)
+    .split(path.sep)
+    .join("/");
+
+  return `${req.protocol}://${req.get("host")}/uploads/${relativePath}`;
+}
+
+function resolveUploadedFilePath(fileUrl) {
+  let pathname = fileUrl;
+
+  try {
+    pathname = new URL(fileUrl).pathname;
+  } catch {
+    pathname = fileUrl;
+  }
+
+  if (!pathname?.startsWith("/uploads/")) {
+    return null;
+  }
+
+  const relativePath = decodeURIComponent(pathname.replace(/^\/uploads\//, ""));
+  const absolutePath = path.resolve(uploadsDir, relativePath);
+  const normalizedUploadsDir = path.resolve(uploadsDir);
+
+  if (!absolutePath.startsWith(normalizedUploadsDir)) {
+    return null;
+  }
+
+  return absolutePath;
+}
 
 export const createFile = async (req, res) => {
   try {
-    const { medicalRecord, fileType, fileUrl } = req.body;
+    const { medicalRecord, fileType } = req.body;
+    const uploadedFile = req.file;
+    const fileUrl = uploadedFile
+      ? buildPublicFileUrl(req, uploadedFile)
+      : req.body.fileUrl;
 
     if (!medicalRecord || !fileType || !fileUrl) {
       return res
         .status(400)
-        .json({ error: "Campos obrigatorios: medicalRecord, fileType e fileUrl" });
+        .json({ error: "Campos obrigatorios: medicalRecord, fileType e arquivo/fileUrl" });
     }
 
     if (!mongoose.isValidObjectId(medicalRecord)) {
       return res.status(400).json({ error: "ID de prontuario invalido" });
+    }
+
+    if (!["Exame", "Radiografia", "Foto"].includes(fileType)) {
+      return res.status(400).json({ error: "Tipo de arquivo invalido" });
     }
 
     const recordExists = await MedicalRecord.exists({ _id: medicalRecord });
@@ -21,7 +68,14 @@ export const createFile = async (req, res) => {
       return res.status(404).json({ error: "Prontuario nao encontrado" });
     }
 
-    const file = await File.create({ medicalRecord, fileType, fileUrl });
+    const file = await File.create({
+      medicalRecord,
+      fileType,
+      fileUrl,
+      fileName: uploadedFile?.filename || uploadedFile?.originalname,
+      mimeType: uploadedFile?.mimetype,
+      fileSize: uploadedFile?.size,
+    });
 
     const populated = await file.populate({
       path: "medicalRecord",
@@ -104,6 +158,11 @@ export const deleteFile = async (req, res) => {
     const file = await File.findByIdAndDelete(id);
     if (!file) {
       return res.status(404).json({ error: "Arquivo nao encontrado" });
+    }
+
+    const localFilePath = resolveUploadedFilePath(file.fileUrl);
+    if (localFilePath) {
+      await fs.unlink(localFilePath).catch(() => null);
     }
 
     return res.status(200).json({ message: "Arquivo removido com sucesso" });

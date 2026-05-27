@@ -104,5 +104,5 @@ API disponível em `http://localhost:3000` (ou porta definida em `PORT`).
 
 - Núcleo de autenticação, pacientes e agenda está funcional.
 - Módulos de tratamentos, orçamentos, prontuários, pagamentos e arquivos estão implementados com validação.
-- Upload binário real de arquivos ainda não está implementado (módulo de arquivos trabalha com metadados/URL).
+- Upload binário real de arquivos está disponível via `POST /api/files` com `multipart/form-data` (`file`, `medicalRecord`, `fileType`).
 

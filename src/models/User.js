@@ -30,6 +30,10 @@ const UserSchema = new mongoose.Schema({
         trim: true,
         alias: "telefone"
     },
+    profilePhotoUrl: {
+        type: String,
+        trim: true,
+    },
     isAdmin: {
         type: Boolean,
         default: false

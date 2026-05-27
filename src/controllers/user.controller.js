@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import fs from "fs/promises";
+import path from "path";
 import User from "../models/User.js";
+import { uploadsDir } from "../middleware/upload.middleware.js";
 
 function normalizeUserPayload(payload = {}) {
   const normalized = {
@@ -25,6 +28,40 @@ function sanitizeUser(userDoc) {
 
 function normalizeCpf(cpf = "") {
   return String(cpf).replace(/\D/g, "").trim();
+}
+
+function buildPublicUploadUrl(req, uploadedFile) {
+  const absolutePath = uploadedFile.path || "";
+  const relativePath = path
+    .relative(uploadsDir, absolutePath)
+    .split(path.sep)
+    .join("/");
+
+  return `${req.protocol}://${req.get("host")}/uploads/${relativePath}`;
+}
+
+function resolveUploadedFilePath(fileUrl) {
+  let pathname = fileUrl;
+
+  try {
+    pathname = new URL(fileUrl).pathname;
+  } catch {
+    pathname = fileUrl;
+  }
+
+  if (!pathname?.startsWith("/uploads/")) {
+    return null;
+  }
+
+  const relativePath = decodeURIComponent(pathname.replace(/^\/uploads\//, ""));
+  const absolutePath = path.resolve(uploadsDir, relativePath);
+  const normalizedUploadsDir = path.resolve(uploadsDir);
+
+  if (!absolutePath.startsWith(normalizedUploadsDir)) {
+    return null;
+  }
+
+  return absolutePath;
 }
 
 export const createUser = async (req, res) => {
@@ -177,6 +214,38 @@ export const deleteUser = async (req, res) => {
     }
 
     return res.status(200).json({ message: "Usuario desativado com sucesso" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateProfilePhoto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const uploadedFile = req.file;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "ID de usuario invalido" });
+    }
+
+    if (!uploadedFile) {
+      return res.status(400).json({ error: "Arquivo de foto obrigatorio" });
+    }
+
+    const user = await User.findOne({ _id: id, ativo: true });
+    if (!user) {
+      return res.status(404).json({ error: "Usuario nao encontrado" });
+    }
+
+    const previousPhotoPath = resolveUploadedFilePath(user.profilePhotoUrl);
+    user.profilePhotoUrl = buildPublicUploadUrl(req, uploadedFile);
+    await user.save();
+
+    if (previousPhotoPath) {
+      await fs.unlink(previousPhotoPath).catch(() => null);
+    }
+
+    return res.status(200).json(sanitizeUser(user));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
