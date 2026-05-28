@@ -8,6 +8,8 @@
     "start": "node src/server.js",
     "seed": "node database/seed.js",
     "migrate:cpf": "node database/migrations/migrateCpfEncryption.js",
+    "migrate:budget-appointment": "node database/migrations/backfillBudgetAppointment.js",
+    "migrate:budget-appointment:apply": "node database/migrations/backfillBudgetAppointment.js --apply",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
