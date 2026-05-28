@@ -6,7 +6,7 @@ import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
 
 export const createBudget = async (req, res) => {
   try {
-    const { patient, treatment, totalPrice, paymentMethod, status } = req.body;
+    const { patient, treatment, appointment, totalPrice, paymentMethod, status } = req.body;
 
     if (!patient || !treatment || totalPrice === undefined || !paymentMethod) {
       return res.status(400).json({
@@ -21,6 +21,10 @@ export const createBudget = async (req, res) => {
 
     if (!mongoose.isValidObjectId(treatment)) {
       return res.status(400).json({ error: "ID de tratamento invalido" });
+    }
+
+    if (appointment && !mongoose.isValidObjectId(appointment)) {
+      return res.status(400).json({ error: "ID de agendamento invalido" });
     }
 
     if (typeof totalPrice !== "number" || totalPrice < 0) {
@@ -45,6 +49,7 @@ export const createBudget = async (req, res) => {
     const budget = await Budget.create({
       patient,
       treatment,
+      appointment,
       totalPrice,
       paymentMethod,
       status,
@@ -63,7 +68,7 @@ export const createBudget = async (req, res) => {
 
 export const getBudgets = async (req, res) => {
   try {
-    const { patient, status } = req.query;
+    const { patient, appointment, status } = req.query;
     const filter = {};
 
     if (patient) {
@@ -75,6 +80,13 @@ export const getBudgets = async (req, res) => {
 
     if (status) {
       filter.status = status;
+    }
+
+    if (appointment) {
+      if (!mongoose.isValidObjectId(appointment)) {
+        return res.status(400).json({ error: "ID de agendamento invalido" });
+      }
+      filter.appointment = appointment;
     }
 
     const budgets = await Budget.find(filter)

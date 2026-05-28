@@ -154,6 +154,7 @@ export const updateTreatmentBodySchema = z.object({
 export const createBudgetBodySchema = z.object({
   patient: objectIdSchema,
   treatment: objectIdSchema,
+  appointment: objectIdSchema.optional(),
   totalPrice: z.coerce.number().min(0),
   paymentMethod: z.enum(["Dinheiro", "Credito", "PIX", "Transferencia"]),
   status: z.enum(["Pendente", "Aprovado", "Recusado"]).optional(),
@@ -162,6 +163,7 @@ export const createBudgetBodySchema = z.object({
 export const updateBudgetBodySchema = z.object({
   patient: objectIdSchema.optional(),
   treatment: objectIdSchema.optional(),
+  appointment: objectIdSchema.optional(),
   totalPrice: z.coerce.number().min(0).optional(),
   paymentMethod: z.enum(["Dinheiro", "Credito", "PIX", "Transferencia"]).optional(),
   status: z.enum(["Pendente", "Aprovado", "Recusado"]).optional(),
@@ -169,6 +171,7 @@ export const updateBudgetBodySchema = z.object({
 
 export const budgetQuerySchema = z.object({
   patient: objectIdSchema.optional(),
+  appointment: objectIdSchema.optional(),
   status: z.enum(["Pendente", "Aprovado", "Recusado"]).optional(),
 });
 

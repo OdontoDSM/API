@@ -13,6 +13,10 @@ const BudgetSchema = new mongoose.Schema(
       ref: "Treatment",
       required: true,
     },
+    appointment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Appointment",
+    },
     totalPrice: {
       type: Number,
       required: true,
