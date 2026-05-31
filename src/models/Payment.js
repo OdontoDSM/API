@@ -35,6 +35,11 @@ const PaymentSchema = new mongoose.Schema(
       default: "Pendente",
       required: true,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+      required: true,
+    },
   },
   { timestamps: true }
 );

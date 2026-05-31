@@ -1,5 +1,8 @@
-import mongoose from "mongoose";
 import Treatment from "../models/Treatment.js";
+import Appointment from "../models/Appointments.js";
+import Budget from "../models/Budget.js";
+import Payment from "../models/Payment.js";
+import { isValidDbId } from "../utils/idValidation.js";
 
 export const createTreatment = async (req, res) => {
   try {
@@ -37,7 +40,7 @@ export const getTreatmentById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de tratamento invalido" });
     }
 
@@ -56,7 +59,7 @@ export const updateTreatment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de tratamento invalido" });
     }
 
@@ -87,14 +90,49 @@ export const deleteTreatment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de tratamento invalido" });
     }
 
-    const treatment = await Treatment.findByIdAndDelete(id);
+    const treatment = await Treatment.findById(id);
     if (!treatment) {
       return res.status(404).json({ error: "Tratamento nao encontrado" });
     }
+
+    const appointments = await Appointment.find({ treatment: id }).select("_id");
+    const appointmentIds = appointments.map((item) => item._id);
+
+    const budgetsByTreatment = await Budget.find({ treatment: id }).select("_id");
+    const budgetsByAppointment = appointmentIds.length > 0
+      ? await Budget.find({ appointment: { $in: appointmentIds } }).select("_id")
+      : [];
+
+    const budgetIds = [
+      ...new Set(
+        [...budgetsByTreatment, ...budgetsByAppointment].map((item) => String(item._id))
+      ),
+    ];
+
+    for (const budgetId of budgetIds) {
+      const payments = await Payment.find({ budget: budgetId }).select("_id isActive");
+
+      for (const payment of payments) {
+        if (payment?.isActive === false) continue;
+
+        await Payment.findByIdAndUpdate(
+          payment._id,
+          { isActive: false },
+          { new: true, runValidators: true }
+        );
+      }
+    }
+
+    if (budgetIds.length > 0) {
+      await Budget.deleteMany({ _id: { $in: budgetIds } });
+    }
+
+    await Appointment.deleteMany({ treatment: id });
+    await Treatment.findByIdAndDelete(id);
 
     return res.status(200).json({ message: "Tratamento removido com sucesso" });
   } catch (error) {

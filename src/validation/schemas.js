@@ -1,7 +1,9 @@
 import { z } from "zod";
-
-const objectId = /^[0-9a-fA-F]{24}$/;
-const objectIdSchema = z.string().regex(objectId, "ID invalido");
+const objectIdSchema = z
+  .string()
+  .trim()
+  .min(1, "ID invalido")
+  .refine((value) => value.length > 0, "ID invalido");
 
 const statusAppointment = [
   "Confirmado",

@@ -1,10 +1,10 @@
 import fs from "fs";
 import path from "path";
 import multer from "multer";
-import mongoose from "mongoose";
 import MedicalRecord from "../models/MedicalRecord.js";
 import Patient from "../models/Patient.js";
 import User from "../models/User.js";
+import { isValidDbId } from "../utils/idValidation.js";
 
 const uploadsDir = path.resolve(process.cwd(), "uploads");
 
@@ -49,7 +49,7 @@ function formatUploadDateTime(date) {
 async function resolvePatientNameFromRequest(req) {
   const medicalRecordId = req.body?.medicalRecord;
 
-  if (!medicalRecordId || !mongoose.isValidObjectId(medicalRecordId)) {
+  if (!medicalRecordId || !isValidDbId(medicalRecordId)) {
     return "paciente";
   }
 
@@ -67,7 +67,7 @@ async function resolvePatientNameFromRequest(req) {
 async function resolveUserNameFromRequest(req) {
   const userId = req.params?.id || req.userId;
 
-  if (!userId || !mongoose.isValidObjectId(userId)) {
+  if (!userId || !isValidDbId(userId)) {
     return "usuario";
   }
 

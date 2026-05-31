@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
 import fs from "fs/promises";
 import path from "path";
 import File from "../models/File.js";
 import MedicalRecord from "../models/MedicalRecord.js";
 import { uploadsDir } from "../middleware/upload.middleware.js";
 import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
+import { isValidDbId } from "../utils/idValidation.js";
 
 function buildPublicFileUrl(req, uploadedFile) {
   const absolutePath = uploadedFile.path
@@ -56,7 +56,7 @@ export const createFile = async (req, res) => {
         .json({ error: "Campos obrigatorios: medicalRecord, fileType e arquivo/fileUrl" });
     }
 
-    if (!mongoose.isValidObjectId(medicalRecord)) {
+    if (!isValidDbId(medicalRecord)) {
       return res.status(400).json({ error: "ID de prontuario invalido" });
     }
 
@@ -96,7 +96,7 @@ export const getFiles = async (req, res) => {
     const filter = {};
 
     if (medicalRecord) {
-      if (!mongoose.isValidObjectId(medicalRecord)) {
+      if (!isValidDbId(medicalRecord)) {
         return res.status(400).json({ error: "ID de prontuario invalido" });
       }
       filter.medicalRecord = medicalRecord;
@@ -124,7 +124,7 @@ export const getFileById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de arquivo invalido" });
     }
 
@@ -152,7 +152,7 @@ export const deleteFile = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de arquivo invalido" });
     }
 

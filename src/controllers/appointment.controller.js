@@ -1,13 +1,14 @@
-import mongoose from "mongoose";
 import Appointment from "../models/Appointments.js";
 import Budget from "../models/Budget.js";
+import Payment from "../models/Payment.js";
 import Patient from "../models/Patient.js";
 import Treatment from "../models/Treatment.js";
 import User from "../models/User.js";
 import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
+import { isValidDbId } from "../utils/idValidation.js";
 
 function isValidObjectId(value) {
-  return mongoose.isValidObjectId(value);
+  return isValidDbId(value);
 }
 
 function parseDate(value) {
@@ -371,6 +372,26 @@ export const deleteAppointment = async (req, res) => {
     if (!appointment) {
       return res.status(404).json({ error: "Agendamento nao encontrado" });
     }
+
+    const relatedBudgets = await Budget.find({ appointment: id }).select("_id");
+
+    for (const budget of relatedBudgets) {
+      const payments = await Payment.find({ budget: budget._id }).select("_id isActive");
+
+      for (const payment of payments) {
+        if (payment?.isActive === false) {
+          continue;
+        }
+
+        await Payment.findByIdAndUpdate(
+          payment._id,
+          { isActive: false },
+          { new: true, runValidators: true }
+        );
+      }
+    }
+
+    await Budget.deleteMany({ appointment: id });
 
     return res.status(200).json({ message: "Agendamento removido com sucesso" });
   } catch (error) {

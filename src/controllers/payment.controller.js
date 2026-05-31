@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
 import Payment from "../models/Payment.js";
 import Budget from "../models/Budget.js";
 import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
+import { isValidDbId } from "../utils/idValidation.js";
 
 function toBudgetPaymentMethod(method) {
   if (method === "Cartao") return "Credito";
@@ -19,7 +19,7 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    if (!mongoose.isValidObjectId(budget)) {
+    if (!isValidDbId(budget)) {
       return res.status(400).json({ error: "ID de orcamento invalido" });
     }
 
@@ -126,10 +126,10 @@ export const createPayment = async (req, res) => {
 export const getPayments = async (req, res) => {
   try {
     const { budget, status } = req.query;
-    const filter = {};
+    const filter = { isActive: { $ne: false } };
 
     if (budget) {
-      if (!mongoose.isValidObjectId(budget)) {
+      if (!isValidDbId(budget)) {
         return res.status(400).json({ error: "ID de orcamento invalido" });
       }
       filter.budget = budget;
@@ -160,11 +160,15 @@ export const getPaymentById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de pagamento invalido" });
     }
 
     let payment = await Payment.findById(id);
+
+    if (payment && payment.isActive === false) {
+      return res.status(404).json({ error: "Pagamento nao encontrado" });
+    }
 
     if (payment && typeof payment.populate === "function") {
       payment = await payment.populate({
@@ -191,8 +195,13 @@ export const updatePayment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de pagamento invalido" });
+    }
+
+    const existingPayment = await Payment.findById(id);
+    if (!existingPayment || existingPayment.isActive === false) {
+      return res.status(404).json({ error: "Pagamento nao encontrado" });
     }
 
     if (req.body.amountPaid !== undefined) {
@@ -233,16 +242,26 @@ export const deletePayment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de pagamento invalido" });
     }
 
-    const payment = await Payment.findByIdAndDelete(id);
+    const payment = await Payment.findById(id);
     if (!payment) {
       return res.status(404).json({ error: "Pagamento nao encontrado" });
     }
 
-    return res.status(200).json({ message: "Pagamento removido com sucesso" });
+    if (payment.isActive === false) {
+      return res.status(200).json({ message: "Pagamento ja estava inativo" });
+    }
+
+    await Payment.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json({ message: "Pagamento desativado com sucesso" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

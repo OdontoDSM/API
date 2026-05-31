@@ -1,7 +1,35 @@
-import mongoose from "mongoose";
 import MedicalRecord from "../models/MedicalRecord.js";
 import Patient from "../models/Patient.js";
+import File from "../models/File.js";
+import fs from "fs/promises";
+import path from "path";
+import { uploadsDir } from "../middleware/upload.middleware.js";
 import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
+import { isValidDbId } from "../utils/idValidation.js";
+
+function resolveUploadedFilePath(fileUrl) {
+  let pathname = fileUrl;
+
+  try {
+    pathname = new URL(fileUrl).pathname;
+  } catch {
+    pathname = fileUrl;
+  }
+
+  if (!pathname?.startsWith("/uploads/")) {
+    return null;
+  }
+
+  const relativePath = decodeURIComponent(pathname.replace(/^\/uploads\//, ""));
+  const absolutePath = path.resolve(uploadsDir, relativePath);
+  const normalizedUploadsDir = path.resolve(uploadsDir);
+
+  if (!absolutePath.startsWith(normalizedUploadsDir)) {
+    return null;
+  }
+
+  return absolutePath;
+}
 
 export const createMedicalRecord = async (req, res) => {
   try {
@@ -11,7 +39,7 @@ export const createMedicalRecord = async (req, res) => {
       return res.status(400).json({ error: "Campo obrigatorio: patient" });
     }
 
-    if (!mongoose.isValidObjectId(patient)) {
+    if (!isValidDbId(patient)) {
       return res.status(400).json({ error: "ID de paciente invalido" });
     }
 
@@ -56,7 +84,7 @@ export const getMedicalRecordById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de prontuario invalido" });
     }
 
@@ -83,7 +111,7 @@ export const getMedicalRecordByPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
 
-    if (!mongoose.isValidObjectId(patientId)) {
+    if (!isValidDbId(patientId)) {
       return res.status(400).json({ error: "ID de paciente invalido" });
     }
 
@@ -106,7 +134,7 @@ export const updateMedicalRecord = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de prontuario invalido" });
     }
 
@@ -135,14 +163,27 @@ export const deleteMedicalRecord = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de prontuario invalido" });
     }
 
-    const record = await MedicalRecord.findByIdAndDelete(id);
+    const record = await MedicalRecord.findById(id);
     if (!record) {
       return res.status(404).json({ error: "Prontuario nao encontrado" });
     }
+
+    const files = await File.find({ medicalRecord: id }).select("_id fileUrl");
+
+    for (const file of files) {
+      const localFilePath = resolveUploadedFilePath(file.fileUrl);
+      if (localFilePath) {
+        await fs.unlink(localFilePath).catch(() => null);
+      }
+
+      await File.findByIdAndDelete(file._id);
+    }
+
+    await MedicalRecord.findByIdAndDelete(id);
 
     return res.status(200).json({ message: "Prontuario removido com sucesso" });
   } catch (error) {

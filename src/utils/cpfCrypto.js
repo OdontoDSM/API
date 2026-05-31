@@ -2,6 +2,27 @@ import crypto from "crypto";
 
 const ENCRYPTED_PREFIX = "enc:v1";
 
+function parseBufferLikeToHex(bufferLike) {
+  if (!bufferLike) return "";
+
+  const values = Array.isArray(bufferLike)
+    ? bufferLike
+    : Object.keys(bufferLike)
+        .filter((key) => /^\d+$/.test(key))
+        .sort((a, b) => Number(a) - Number(b))
+        .map((key) => bufferLike[key]);
+
+  if (!values || values.length === 0) return "";
+
+  const bytes = values
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value >= 0 && value <= 255);
+
+  if (bytes.length !== 12) return "";
+
+  return bytes.map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function stripCpfMask(value = "") {
   return String(value).replace(/\D/g, "").trim();
 }
@@ -108,6 +129,32 @@ export function serializeWithDecryptedCpf(value) {
 
   if (!raw || typeof raw !== "object") {
     return raw;
+  }
+
+  // Mantem ObjectId (Mongo) serializado como string legivel para o frontend.
+  if (typeof raw.toHexString === "function") {
+    return raw.toHexString();
+  }
+
+  if (raw.buffer) {
+    const hexId = parseBufferLikeToHex(raw.buffer);
+    if (hexId) {
+      return hexId;
+    }
+  }
+
+  if (raw.type === "Buffer" && raw.data) {
+    const hexId = parseBufferLikeToHex(raw.data);
+    if (hexId) {
+      return hexId;
+    }
+  }
+
+  if (raw._bsontype === "ObjectId" && typeof raw.toString === "function") {
+    const objectIdText = raw.toString();
+    if (objectIdText && objectIdText !== "[object Object]") {
+      return objectIdText;
+    }
   }
 
   if (raw instanceof Date) {

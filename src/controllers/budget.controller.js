@@ -1,9 +1,10 @@
-import mongoose from "mongoose";
 import Budget from "../models/Budget.js";
 import Appointment from "../models/Appointments.js";
 import Patient from "../models/Patient.js";
+import Payment from "../models/Payment.js";
 import Treatment from "../models/Treatment.js";
 import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
+import { isValidDbId } from "../utils/idValidation.js";
 
 export const createBudget = async (req, res) => {
   try {
@@ -16,15 +17,15 @@ export const createBudget = async (req, res) => {
       });
     }
 
-    if (!mongoose.isValidObjectId(patient)) {
+    if (!isValidDbId(patient)) {
       return res.status(400).json({ error: "ID de paciente invalido" });
     }
 
-    if (!mongoose.isValidObjectId(treatment)) {
+    if (!isValidDbId(treatment)) {
       return res.status(400).json({ error: "ID de tratamento invalido" });
     }
 
-    if (appointment && !mongoose.isValidObjectId(appointment)) {
+    if (appointment && !isValidDbId(appointment)) {
       return res.status(400).json({ error: "ID de agendamento invalido" });
     }
 
@@ -106,7 +107,7 @@ export const getBudgets = async (req, res) => {
     const filter = {};
 
     if (patient) {
-      if (!mongoose.isValidObjectId(patient)) {
+      if (!isValidDbId(patient)) {
         return res.status(400).json({ error: "ID de paciente invalido" });
       }
       filter.patient = patient;
@@ -117,7 +118,7 @@ export const getBudgets = async (req, res) => {
     }
 
     if (appointment) {
-      if (!mongoose.isValidObjectId(appointment)) {
+      if (!isValidDbId(appointment)) {
         return res.status(400).json({ error: "ID de agendamento invalido" });
       }
       filter.appointment = appointment;
@@ -138,7 +139,7 @@ export const getBudgetById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de orcamento invalido" });
     }
 
@@ -165,15 +166,15 @@ export const updateBudget = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de orcamento invalido" });
     }
 
-    if (req.body.patient && !mongoose.isValidObjectId(req.body.patient)) {
+    if (req.body.patient && !isValidDbId(req.body.patient)) {
       return res.status(400).json({ error: "ID de paciente invalido" });
     }
 
-    if (req.body.treatment && !mongoose.isValidObjectId(req.body.treatment)) {
+    if (req.body.treatment && !isValidDbId(req.body.treatment)) {
       return res.status(400).json({ error: "ID de tratamento invalido" });
     }
 
@@ -211,14 +212,28 @@ export const deleteBudget = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de orcamento invalido" });
     }
 
-    const budget = await Budget.findByIdAndDelete(id);
+    const budget = await Budget.findById(id);
     if (!budget) {
       return res.status(404).json({ error: "Orcamento nao encontrado" });
     }
+
+    const payments = await Payment.find({ budget: id }).select("_id isActive");
+
+    for (const payment of payments) {
+      if (payment?.isActive === false) continue;
+
+      await Payment.findByIdAndUpdate(
+        payment._id,
+        { isActive: false },
+        { new: true, runValidators: true }
+      );
+    }
+
+    await Budget.findByIdAndDelete(id);
 
     return res.status(200).json({ message: "Orcamento removido com sucesso" });
   } catch (error) {

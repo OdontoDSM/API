@@ -1,11 +1,43 @@
 import Patient from "../models/Patient.js";
-import mongoose from "mongoose";
+import Appointment from "../models/Appointments.js";
+import Budget from "../models/Budget.js";
+import Payment from "../models/Payment.js";
+import MedicalRecord from "../models/MedicalRecord.js";
+import File from "../models/File.js";
+import fs from "fs/promises";
+import path from "path";
+import { uploadsDir } from "../middleware/upload.middleware.js";
 import {
     buildSecuredCpf,
     hashCpf,
     normalizeCpf,
     serializeWithDecryptedCpf,
 } from "../utils/cpfCrypto.js";
+import { isValidDbId } from "../utils/idValidation.js";
+
+function resolveUploadedFilePath(fileUrl) {
+    let pathname = fileUrl;
+
+    try {
+        pathname = new URL(fileUrl).pathname;
+    } catch {
+        pathname = fileUrl;
+    }
+
+    if (!pathname?.startsWith("/uploads/")) {
+        return null;
+    }
+
+    const relativePath = decodeURIComponent(pathname.replace(/^\/uploads\//, ""));
+    const absolutePath = path.resolve(uploadsDir, relativePath);
+    const normalizedUploadsDir = path.resolve(uploadsDir);
+
+    if (!absolutePath.startsWith(normalizedUploadsDir)) {
+        return null;
+    }
+
+    return absolutePath;
+}
 
 function normalizePatientPayload(payload = {}) {
     const normalized = {
@@ -63,7 +95,7 @@ export const getPatients = async (req, res) => {
 
 export const getPatientById = async (req, res) => {
     try{
-        if (!mongoose.isValidObjectId(req.params.id)) {
+        if (!isValidDbId(req.params.id)) {
             return res.status(400).json({ error: "ID de paciente invalido" });
         }
 
@@ -77,7 +109,7 @@ export const getPatientById = async (req, res) => {
 
 export const updatePatient = async (req, res) => {
     try{
-        if (!mongoose.isValidObjectId(req.params.id)) {
+        if (!isValidDbId(req.params.id)) {
             return res.status(400).json({ error: "ID de paciente invalido" });
         }
 
@@ -125,12 +157,69 @@ export const updatePatient = async (req, res) => {
 
 export const deletePatient = async (req, res) =>{
     try{
-        if (!mongoose.isValidObjectId(req.params.id)) {
+        if (!isValidDbId(req.params.id)) {
             return res.status(400).json({ error: "ID de paciente invalido" });
         }
 
-        const patient = await Patient.findByIdAndDelete(req.params.id);
+        const patient = await Patient.findById(req.params.id);
         if(!patient) return res.status(404).json({error: "Paciente não encontrado"});
+
+        const patientId = req.params.id;
+
+        const appointments = await Appointment.find({ patient: patientId }).select("_id");
+        const appointmentIds = appointments.map((item) => item._id);
+
+        const budgetsByPatient = await Budget.find({ patient: patientId }).select("_id");
+        const budgetsByAppointment = appointmentIds.length > 0
+            ? await Budget.find({ appointment: { $in: appointmentIds } }).select("_id")
+            : [];
+
+        const budgetIds = [
+            ...new Set(
+                [...budgetsByPatient, ...budgetsByAppointment]
+                    .map((item) => String(item._id))
+            ),
+        ];
+
+        for (const budgetId of budgetIds) {
+            const payments = await Payment.find({ budget: budgetId }).select("_id isActive");
+
+            for (const payment of payments) {
+                if (payment?.isActive === false) continue;
+
+                await Payment.findByIdAndUpdate(
+                    payment._id,
+                    { isActive: false },
+                    { new: true, runValidators: true }
+                );
+            }
+        }
+
+        if (budgetIds.length > 0) {
+            await Budget.deleteMany({ _id: { $in: budgetIds } });
+        }
+
+        const medicalRecords = await MedicalRecord.find({ patient: patientId }).select("_id");
+        const medicalRecordIds = medicalRecords.map((item) => item._id);
+
+        if (medicalRecordIds.length > 0) {
+            const files = await File.find({ medicalRecord: { $in: medicalRecordIds } }).select("_id fileUrl");
+
+            for (const file of files) {
+                const localFilePath = resolveUploadedFilePath(file.fileUrl);
+                if (localFilePath) {
+                    await fs.unlink(localFilePath).catch(() => null);
+                }
+
+                await File.findByIdAndDelete(file._id);
+            }
+
+            await MedicalRecord.deleteMany({ _id: { $in: medicalRecordIds } });
+        }
+
+        await Appointment.deleteMany({ patient: patientId });
+        await Patient.findByIdAndDelete(patientId);
+
         res.status(200).json({message: "Paciente deletado com sucesso"});
     } catch (error) {
         res.status(500).json({ error: error.message });

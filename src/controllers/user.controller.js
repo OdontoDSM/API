@@ -1,9 +1,9 @@
-import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
 import path from "path";
 import User from "../models/User.js";
 import { uploadsDir } from "../middleware/upload.middleware.js";
+import { isValidDbId } from "../utils/idValidation.js";
 import {
   buildSecuredCpf,
   hashCpf,
@@ -133,7 +133,7 @@ export const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de usuario invalido" });
     }
 
@@ -152,7 +152,7 @@ export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de usuario invalido" });
     }
 
@@ -222,7 +222,7 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de usuario invalido" });
     }
 
@@ -247,7 +247,7 @@ export const updateProfilePhoto = async (req, res) => {
     const { id } = req.params;
     const uploadedFile = req.file;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidDbId(id)) {
       return res.status(400).json({ error: "ID de usuario invalido" });
     }
 
