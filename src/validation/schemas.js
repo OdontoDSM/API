@@ -114,6 +114,7 @@ export const updatePatientBodySchema = z.object({
 
 export const createAppointmentBodySchema = z.object({
   patient: objectIdSchema,
+  treatment: objectIdSchema,
   user: objectIdSchema.optional(),
   room: z.coerce.number().int().positive(),
   dateTime: z.coerce.date(),
@@ -123,6 +124,7 @@ export const createAppointmentBodySchema = z.object({
 
 export const updateAppointmentBodySchema = z.object({
   patient: objectIdSchema.optional(),
+  treatment: objectIdSchema.optional(),
   user: objectIdSchema.optional(),
   room: z.coerce.number().int().positive().optional(),
   dateTime: z.coerce.date().optional(),
@@ -132,6 +134,7 @@ export const updateAppointmentBodySchema = z.object({
 
 export const appointmentQuerySchema = z.object({
   patient: objectIdSchema.optional(),
+  treatment: objectIdSchema.optional(),
   user: objectIdSchema.optional(),
   room: z.coerce.number().int().positive().optional(),
   status: z.enum(statusAppointment).optional(),

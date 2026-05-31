@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Appointment from "../models/Appointments.js";
 import Patient from "../models/Patient.js";
+import Treatment from "../models/Treatment.js";
 import User from "../models/User.js";
 import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
 
@@ -30,17 +31,21 @@ async function hasRoomConflict({ room, dateTime, ignoreId }) {
 
 export const createAppointment = async (req, res) => {
   try {
-    const { patient, room, dateTime, status, notes } = req.body;
+    const { patient, treatment, room, dateTime, status, notes } = req.body;
     const user = req.body.user || req.userId;
 
-    if (!patient || room === undefined || !dateTime) {
+    if (!patient || !treatment || room === undefined || !dateTime) {
       return res
         .status(400)
-        .json({ error: "Campos obrigatorios: patient, room e dateTime" });
+        .json({ error: "Campos obrigatorios: patient, treatment, room e dateTime" });
     }
 
     if (!isValidObjectId(patient)) {
       return res.status(400).json({ error: "ID de paciente invalido" });
+    }
+
+    if (!isValidObjectId(treatment)) {
+      return res.status(400).json({ error: "ID de tratamento invalido" });
     }
 
     if (!isValidObjectId(user)) {
@@ -57,13 +62,18 @@ export const createAppointment = async (req, res) => {
       return res.status(400).json({ error: "dateTime invalido" });
     }
 
-    const [patientExists, userExists] = await Promise.all([
+    const [patientExists, treatmentExists, userExists] = await Promise.all([
       Patient.exists({ _id: patient }),
+      Treatment.exists({ _id: treatment }),
       User.exists({ _id: user }),
     ]);
 
     if (!patientExists) {
       return res.status(404).json({ error: "Paciente nao encontrado" });
+    }
+
+    if (!treatmentExists) {
+      return res.status(404).json({ error: "Tratamento nao encontrado" });
     }
 
     if (!userExists) {
@@ -83,6 +93,7 @@ export const createAppointment = async (req, res) => {
 
     const appointment = await Appointment.create({
       patient,
+      treatment,
       user,
       room: roomNumber,
       dateTime: parsedDateTime,
@@ -92,6 +103,7 @@ export const createAppointment = async (req, res) => {
 
     const populated = await appointment.populate([
       { path: "patient", select: "name cpf phone" },
+      { path: "treatment", select: "name description" },
       { path: "user", select: "name email" },
     ]);
 
@@ -104,7 +116,7 @@ export const createAppointment = async (req, res) => {
 export const getAppointments = async (req, res) => {
   try {
     const query = req.validatedQuery ?? req.query;
-    const { patient, user, room, status, startDate, endDate } = query;
+    const { patient, treatment, user, room, status, startDate, endDate } = query;
 
     const filter = {};
 
@@ -113,6 +125,12 @@ export const getAppointments = async (req, res) => {
         return res.status(400).json({ error: "ID de paciente invalido" });
       }
       filter.patient = patient;
+    }
+    if (treatment) {
+      if (!isValidObjectId(treatment)) {
+        return res.status(400).json({ error: "ID de tratamento invalido" });
+      }
+      filter.treatment = treatment;
     }
 
     if (user) {
@@ -157,6 +175,7 @@ export const getAppointments = async (req, res) => {
     const appointments = await Appointment.find(filter)
       .sort({ dateTime: 1 })
       .populate("patient", "name cpf phone")
+      .populate("treatment", "name description")
       .populate("user", "name email");
 
     return res.status(200).json(serializeWithDecryptedCpf(appointments));
@@ -178,6 +197,7 @@ export const getAppointmentById = async (req, res) => {
     if (appointment && typeof appointment.populate === "function") {
       appointment = await appointment.populate([
         { path: "patient", select: "name cpf phone" },
+        { path: "treatment", select: "name description" },
         { path: "user", select: "name email" },
       ]);
     }
@@ -220,6 +240,9 @@ export const updateAppointment = async (req, res) => {
     if (req.body.patient && !isValidObjectId(req.body.patient)) {
       return res.status(400).json({ error: "ID de paciente invalido" });
     }
+    if (req.body.treatment && !isValidObjectId(req.body.treatment)) {
+      return res.status(400).json({ error: "ID de tratamento invalido" });
+    }
 
     if (req.body.user && !isValidObjectId(req.body.user)) {
       return res.status(400).json({ error: "ID de usuario invalido" });
@@ -229,6 +252,13 @@ export const updateAppointment = async (req, res) => {
       const patientExists = await Patient.exists({ _id: req.body.patient });
       if (!patientExists) {
         return res.status(404).json({ error: "Paciente nao encontrado" });
+      }
+    }
+    
+    if (req.body.treatment) {
+      const treatmentExists = await Treatment.exists({ _id: req.body.treatment });
+      if (!treatmentExists) {
+        return res.status(404).json({ error: "Tratamento nao encontrado" });
       }
     }
 
@@ -266,6 +296,7 @@ export const updateAppointment = async (req, res) => {
     if (updated && typeof updated.populate === "function") {
       updated = await updated.populate([
         { path: "patient", select: "name cpf phone" },
+        { path: "treatment", select: "name description" },
         { path: "user", select: "name email" },
       ]);
     }
