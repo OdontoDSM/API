@@ -204,6 +204,12 @@ export const updatePayment = async (req, res) => {
       return res.status(404).json({ error: "Pagamento nao encontrado" });
     }
 
+    const nextBudgetId = req.body.budget ?? existingPayment.budget;
+
+    if (req.body.budget && !isValidDbId(req.body.budget)) {
+      return res.status(400).json({ error: "ID de orcamento invalido" });
+    }
+
     if (req.body.amountPaid !== undefined) {
       if (typeof req.body.amountPaid !== "number" || req.body.amountPaid < 0) {
         return res
@@ -211,6 +217,52 @@ export const updatePayment = async (req, res) => {
           .json({ error: "amountPaid deve ser um numero positivo" });
       }
     }
+
+    const discountValue = req.body.discount ?? existingPayment.discount ?? 0;
+    if (typeof discountValue !== "number" || discountValue < 0) {
+      return res
+        .status(400)
+        .json({ error: "discount deve ser um numero positivo" });
+    }
+
+    if (req.body.paymentDate !== undefined) {
+      const parsedPaymentDate = new Date(req.body.paymentDate);
+      if (Number.isNaN(parsedPaymentDate.getTime())) {
+        return res.status(400).json({ error: "paymentDate invalida" });
+      }
+    }
+
+    const budgetDoc = await Budget.findById(nextBudgetId);
+    if (!budgetDoc) {
+      return res.status(404).json({ error: "Orcamento nao encontrado" });
+    }
+
+    const allPayments = await Payment.find({ budget: nextBudgetId }).select("_id amountPaid discount isActive");
+    const alreadyPaid = allPayments
+      .filter((payment) => String(payment._id) !== String(existingPayment._id) && payment?.isActive !== false)
+      .reduce((sum, payment) => sum + ((payment.amountPaid || 0) - (payment.discount ?? 0)), 0);
+
+    const nextAmountPaid = req.body.amountPaid ?? existingPayment.amountPaid ?? 0;
+    const netNew = nextAmountPaid - discountValue;
+
+    if (alreadyPaid + netNew > budgetDoc.totalPrice) {
+      return res.status(400).json({
+        error: `Valor total dos pagamentos (${alreadyPaid + netNew}) excede o totalPrice do orcamento (${budgetDoc.totalPrice})`,
+      });
+    }
+
+    const nextStatus = req.body.status ?? existingPayment.status;
+    const nextPaymentMethod = req.body.paymentMethod ?? existingPayment.paymentMethod;
+    const budgetStatus = nextStatus === "Pago" ? "Aprovado" : "Pendente";
+
+    await Budget.findByIdAndUpdate(
+      nextBudgetId,
+      {
+        status: budgetStatus,
+        paymentMethod: toBudgetPaymentMethod(nextPaymentMethod),
+      },
+      { new: true, runValidators: true }
+    );
 
     let payment = await Payment.findByIdAndUpdate(id, req.body, {
       new: true,

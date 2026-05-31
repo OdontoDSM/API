@@ -178,11 +178,36 @@ export const updateBudget = async (req, res) => {
       return res.status(400).json({ error: "ID de tratamento invalido" });
     }
 
+    if (req.body.appointment && !isValidDbId(req.body.appointment)) {
+      return res.status(400).json({ error: "ID de agendamento invalido" });
+    }
+
     if (req.body.totalPrice !== undefined) {
       if (typeof req.body.totalPrice !== "number" || req.body.totalPrice < 0) {
         return res
           .status(400)
           .json({ error: "totalPrice deve ser um numero positivo" });
+      }
+    }
+
+    if (req.body.patient) {
+      const patientExists = await Patient.exists({ _id: req.body.patient });
+      if (!patientExists) {
+        return res.status(404).json({ error: "Paciente nao encontrado" });
+      }
+    }
+
+    if (req.body.treatment) {
+      const treatmentExists = await Treatment.exists({ _id: req.body.treatment });
+      if (!treatmentExists) {
+        return res.status(404).json({ error: "Tratamento nao encontrado" });
+      }
+    }
+
+    if (req.body.appointment) {
+      const appointmentExists = await Appointment.exists({ _id: req.body.appointment });
+      if (!appointmentExists) {
+        return res.status(404).json({ error: "Agendamento nao encontrado" });
       }
     }
 
