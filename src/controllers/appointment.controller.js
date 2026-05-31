@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Appointment from "../models/Appointments.js";
+import Budget from "../models/Budget.js";
 import Patient from "../models/Patient.js";
 import Treatment from "../models/Treatment.js";
 import User from "../models/User.js";
@@ -27,6 +28,52 @@ async function hasRoomConflict({ room, dateTime, ignoreId }) {
 
   const conflict = await Appointment.findOne(filter).select("_id");
   return Boolean(conflict);
+}
+
+function getEntityId(value) {
+  if (!value) return null;
+  if (typeof value === "object") return value._id || value.id || null;
+  return value;
+}
+
+async function syncPendingBudgetFromAppointment(appointmentDoc) {
+  if (!appointmentDoc || appointmentDoc.status !== "Concluido") {
+    return;
+  }
+
+  const appointmentId = getEntityId(appointmentDoc._id || appointmentDoc.id);
+  const patientId = getEntityId(appointmentDoc.patient);
+  const treatmentId = getEntityId(appointmentDoc.treatment);
+
+  if (!appointmentId || !patientId || !treatmentId) {
+    return;
+  }
+
+  const treatmentDoc = await Treatment.findById(treatmentId).select("basePrice");
+  const totalPrice = Number(treatmentDoc?.basePrice ?? 0);
+
+  const payload = {
+    patient: patientId,
+    treatment: treatmentId,
+    appointment: appointmentId,
+    totalPrice: Number.isFinite(totalPrice) && totalPrice >= 0 ? totalPrice : 0,
+  };
+
+  const existingBudget = await Budget.findOne({ appointment: appointmentId }).select("_id");
+
+  if (existingBudget?._id) {
+    await Budget.findByIdAndUpdate(existingBudget._id, payload, {
+      new: true,
+      runValidators: true,
+    });
+    return;
+  }
+
+  await Budget.create({
+    ...payload,
+    paymentMethod: "PIX",
+    status: "Pendente",
+  });
 }
 
 export const createAppointment = async (req, res) => {
@@ -101,9 +148,11 @@ export const createAppointment = async (req, res) => {
       notes,
     });
 
+    await syncPendingBudgetFromAppointment(appointment);
+
     const populated = await appointment.populate([
       { path: "patient", select: "name cpf phone" },
-      { path: "treatment", select: "name description" },
+      { path: "treatment", select: "name description basePrice" },
       { path: "user", select: "name email" },
     ]);
 
@@ -175,7 +224,7 @@ export const getAppointments = async (req, res) => {
     const appointments = await Appointment.find(filter)
       .sort({ dateTime: 1 })
       .populate("patient", "name cpf phone")
-      .populate("treatment", "name description")
+      .populate("treatment", "name description basePrice")
       .populate("user", "name email");
 
     return res.status(200).json(serializeWithDecryptedCpf(appointments));
@@ -197,7 +246,7 @@ export const getAppointmentById = async (req, res) => {
     if (appointment && typeof appointment.populate === "function") {
       appointment = await appointment.populate([
         { path: "patient", select: "name cpf phone" },
-        { path: "treatment", select: "name description" },
+        { path: "treatment", select: "name description basePrice" },
         { path: "user", select: "name email" },
       ]);
     }
@@ -293,10 +342,12 @@ export const updateAppointment = async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    await syncPendingBudgetFromAppointment(updated);
+
     if (updated && typeof updated.populate === "function") {
       updated = await updated.populate([
         { path: "patient", select: "name cpf phone" },
-        { path: "treatment", select: "name description" },
+        { path: "treatment", select: "name description basePrice" },
         { path: "user", select: "name email" },
       ]);
     }

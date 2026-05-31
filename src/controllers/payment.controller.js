@@ -3,6 +3,11 @@ import Payment from "../models/Payment.js";
 import Budget from "../models/Budget.js";
 import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
 
+function toBudgetPaymentMethod(method) {
+  if (method === "Cartao") return "Credito";
+  return method;
+}
+
 export const createPayment = async (req, res) => {
   try {
     const { budget, amountPaid, discount, paymentMethod, installments, paymentDate, status } =
@@ -31,16 +36,26 @@ export const createPayment = async (req, res) => {
         .json({ error: "discount deve ser um numero positivo" });
     }
 
+    const parsedPaymentDate = new Date(paymentDate);
+    if (Number.isNaN(parsedPaymentDate.getTime())) {
+      return res.status(400).json({ error: "paymentDate invalida" });
+    }
+
     const budgetDoc = await Budget.findById(budget);
     if (!budgetDoc) {
       return res.status(404).json({ error: "Orcamento nao encontrado" });
     }
 
-    const existingPayments = await Payment.find({ budget }).select("amountPaid discount");
-    const alreadyPaid = existingPayments.reduce(
-      (sum, p) => sum + (p.amountPaid - (p.discount ?? 0)),
+    const existingPayment = await Payment.findOne({ budget });
+    const allPayments = await Payment.find({ budget }).select("_id amountPaid discount");
+    const existingId = existingPayment?._id ? String(existingPayment._id) : null;
+
+    const alreadyPaid = allPayments
+      .filter((p) => String(p._id) !== existingId)
+      .reduce(
+        (sum, p) => sum + (p.amountPaid - (p.discount ?? 0)),
       0
-    );
+      );
 
     const netNew = amountPaid - discountValue;
     if (alreadyPaid + netNew > budgetDoc.totalPrice) {
@@ -49,20 +64,57 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    const payment = await Payment.create({
+    const budgetStatus = status === "Pago" ? "Aprovado" : "Pendente";
+    await Budget.findByIdAndUpdate(
+      budget,
+      {
+        status: budgetStatus,
+        paymentMethod: toBudgetPaymentMethod(paymentMethod),
+      },
+      { new: true, runValidators: true }
+    );
+
+    const payload = {
       budget,
       amountPaid,
       discount: discountValue,
       paymentMethod,
       installments,
-      paymentDate: new Date(paymentDate),
+      paymentDate: parsedPaymentDate,
       status,
+    };
+
+    if (existingPayment) {
+      let updatedPayment = await Payment.findByIdAndUpdate(existingPayment._id, payload, {
+        new: true,
+        runValidators: true,
+      });
+
+      if (updatedPayment && typeof updatedPayment.populate === "function") {
+        updatedPayment = await updatedPayment.populate({
+          path: "budget",
+          select: "totalPrice paymentMethod status patient treatment appointment",
+          populate: [
+            { path: "patient", select: "name cpf" },
+            { path: "treatment", select: "name" },
+          ],
+        });
+      }
+
+      return res.status(200).json(serializeWithDecryptedCpf(updatedPayment));
+    }
+
+    const payment = await Payment.create({
+      ...payload,
     });
 
     const populated = await payment.populate({
       path: "budget",
-      select: "totalPrice paymentMethod status",
-      populate: { path: "patient", select: "name cpf" },
+      select: "totalPrice paymentMethod status patient treatment appointment",
+      populate: [
+        { path: "patient", select: "name cpf" },
+        { path: "treatment", select: "name" },
+      ],
     });
 
     return res.status(201).json(serializeWithDecryptedCpf(populated));
@@ -91,8 +143,11 @@ export const getPayments = async (req, res) => {
       .sort({ paymentDate: -1 })
       .populate({
         path: "budget",
-        select: "totalPrice paymentMethod status",
-        populate: { path: "patient", select: "name cpf" },
+        select: "totalPrice paymentMethod status patient treatment appointment",
+        populate: [
+          { path: "patient", select: "name cpf" },
+          { path: "treatment", select: "name" },
+        ],
       });
 
     return res.status(200).json(serializeWithDecryptedCpf(payments));
@@ -114,8 +169,11 @@ export const getPaymentById = async (req, res) => {
     if (payment && typeof payment.populate === "function") {
       payment = await payment.populate({
         path: "budget",
-        select: "totalPrice paymentMethod status",
-        populate: { path: "patient", select: "name cpf" },
+        select: "totalPrice paymentMethod status patient treatment appointment",
+        populate: [
+          { path: "patient", select: "name cpf" },
+          { path: "treatment", select: "name" },
+        ],
       });
     }
 
@@ -153,8 +211,11 @@ export const updatePayment = async (req, res) => {
     if (payment && typeof payment.populate === "function") {
       payment = await payment.populate({
         path: "budget",
-        select: "totalPrice paymentMethod status",
-        populate: { path: "patient", select: "name cpf" },
+        select: "totalPrice paymentMethod status patient treatment appointment",
+        populate: [
+          { path: "patient", select: "name cpf" },
+          { path: "treatment", select: "name" },
+        ],
       });
     }
 

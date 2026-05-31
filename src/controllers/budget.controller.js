@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Budget from "../models/Budget.js";
+import Appointment from "../models/Appointments.js";
 import Patient from "../models/Patient.js";
 import Treatment from "../models/Treatment.js";
 import { serializeWithDecryptedCpf } from "../utils/cpfCrypto.js";
@@ -44,6 +45,39 @@ export const createBudget = async (req, res) => {
 
     if (!treatmentExists) {
       return res.status(404).json({ error: "Tratamento nao encontrado" });
+    }
+
+    if (appointment) {
+      const appointmentExists = await Appointment.exists({ _id: appointment });
+      if (!appointmentExists) {
+        return res.status(404).json({ error: "Agendamento nao encontrado" });
+      }
+
+      const existingBudget = await Budget.findOne({ appointment });
+
+      if (existingBudget) {
+        let updatedBudget = await Budget.findByIdAndUpdate(
+          existingBudget._id,
+          {
+            patient,
+            treatment,
+            appointment,
+            totalPrice,
+            paymentMethod,
+            status,
+          },
+          { new: true, runValidators: true }
+        );
+
+        if (updatedBudget && typeof updatedBudget.populate === "function") {
+          updatedBudget = await updatedBudget.populate([
+            { path: "patient", select: "name cpf phone" },
+            { path: "treatment", select: "name basePrice" },
+          ]);
+        }
+
+        return res.status(200).json(serializeWithDecryptedCpf(updatedBudget));
+      }
     }
 
     const budget = await Budget.create({

@@ -110,16 +110,24 @@ async function populateDoc(rawData, spec) {
   const result = { ...rawData };
 
   for (const s of specs) {
-    const { path: fieldPath, select } = typeof s === "string" ? { path: s, select: null } : s;
+    const { path: fieldPath, select, populate: nestedPopulate } = typeof s === "string" ? { path: s, select: null, populate: null } : s;
     const refId = result[fieldPath];
-    if (!refId) continue;
+    if (!refId || typeof refId === "object") continue;
 
     const collName = resolveCollection(fieldPath);
-    const coll = getCollectionByName(collName);
+    let coll = getCollectionByName(collName);
+    // Cria a coleção sob demanda se ainda não foi registrada
+    if (!coll && dbState.sqlite) {
+      coll = new SqliteCollection(dbState.sqlite, collName);
+    }
     if (!coll) continue;
 
-    const refDoc = coll._findByIdRaw(String(refId));
+    let refDoc = coll._findByIdRaw(String(refId));
     if (refDoc) {
+      // Suporte a populate aninhado
+      if (nestedPopulate) {
+        refDoc = await populateDoc(refDoc, nestedPopulate);
+      }
       result[fieldPath] = select ? applySelect(refDoc, select) : refDoc;
     }
   }
