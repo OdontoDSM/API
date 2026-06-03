@@ -19,9 +19,12 @@ pnpm-debug.log*
 database.sqlite
 *.sqlite
 *.sqlite3
+*.sqlite-journal
+*.db
+*.db-journal
 
 # Uploaded files
-uploads/
+uploads/*
 !uploads/.gitkeep
 
 # Build and coverage

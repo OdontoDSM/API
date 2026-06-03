@@ -22,7 +22,11 @@ API REST em Node.js/Express para autenticação, gestão de pacientes, agenda e 
 1. Copie o arquivo de ambiente:
 
 ```bash
+# Linux/macOS
 cp .env.exemple .env
+
+# Windows PowerShell
+Copy-Item .env.exemple .env
 ```
 
 2. Ajuste as variáveis conforme seu ambiente:
@@ -44,6 +48,7 @@ npm install
 
 - `npm run dev`: inicia API com nodemon
 - `npm start`: inicia API em modo normal
+- `npm test`: executa testes de integração com Node Test Runner
 - `npm run seed`: popula base com dados de teste
 - `npm run migrate:cpf`: migra CPFs legados para formato criptografado + hash
 - `npm run migrate:uploads-folders`: dry-run da migracao de uploads para pastas por ID (MongoDB ou SQLite fallback)
@@ -103,6 +108,14 @@ npm run dev
 ```
 
 API disponível em `http://localhost:3000` (ou porta definida em `PORT`).
+
+## Testes
+
+```bash
+npm test
+```
+
+Arquivos de teste ficam em `tests/`.
 
 ## Estado atual
 
