@@ -41,6 +41,10 @@ export const loginBodySchema = z.object({
   password: z.string().min(1),
 });
 
+export const refreshTokenBodySchema = z.object({
+  refreshToken: z.string().trim().min(1),
+});
+
 export const forgotPasswordBodySchema = z.object({
   email: z.string().trim().email(),
   cpf: z.string().trim().min(11),

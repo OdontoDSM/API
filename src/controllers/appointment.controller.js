@@ -77,6 +77,14 @@ async function syncPendingBudgetFromAppointment(appointmentDoc) {
   });
 }
 
+async function syncPendingBudgetSafely(appointmentDoc) {
+  try {
+    await syncPendingBudgetFromAppointment(appointmentDoc);
+  } catch (error) {
+    console.warn("[appointment] Falha ao sincronizar orçamento pendente:", error?.message || error);
+  }
+}
+
 export const createAppointment = async (req, res) => {
   try {
     const { patient, treatment, room, dateTime, status, notes } = req.body;
@@ -149,7 +157,7 @@ export const createAppointment = async (req, res) => {
       notes,
     });
 
-    await syncPendingBudgetFromAppointment(appointment);
+    await syncPendingBudgetSafely(appointment);
 
     const populated = await appointment.populate([
       { path: "patient", select: "name cpf phone" },
@@ -343,7 +351,7 @@ export const updateAppointment = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    await syncPendingBudgetFromAppointment(updated);
+    await syncPendingBudgetSafely(updated);
 
     if (updated && typeof updated.populate === "function") {
       updated = await updated.populate([

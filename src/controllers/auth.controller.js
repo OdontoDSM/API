@@ -8,6 +8,29 @@ import {
     serializeWithDecryptedCpf,
 } from "../utils/cpfCrypto.js";
 
+const ACCESS_TOKEN_EXPIRES_IN = "1d";
+const REFRESH_TOKEN_EXPIRES_IN = "7d";
+
+function getRefreshSecret() {
+    return process.env.JWT_REFRESH_SECRET || `${process.env.JWT_SECRET}_refresh`;
+}
+
+function buildAuthPayload(user) {
+    return { id: user._id, isAdmin: user.isAdmin };
+}
+
+function signAccessToken(user) {
+    return jwt.sign(buildAuthPayload(user), process.env.JWT_SECRET, {
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+    });
+}
+
+function signRefreshToken(user) {
+    return jwt.sign(buildAuthPayload(user), getRefreshSecret(), {
+        expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+    });
+}
+
 export async function register(req, res) {
     try {
         const name = req.body.name || req.body.nome;
@@ -90,14 +113,12 @@ export async function login(req, res){
 
         if(!valid) return res.status(401).json({error: "Senha incorreta"});
 
-        const token = jwt.sign(
-            { id: user._id, isAdmin: user.isAdmin },
-            process.env.JWT_SECRET,
-            { expiresIn: "1d" }
-        );
+        const token = signAccessToken(user);
+        const refreshToken = signRefreshToken(user);
 
         res.json({
             token,
+            refreshToken,
             user: {
                 id: user._id,
                 name: user.name,
@@ -109,6 +130,33 @@ export async function login(req, res){
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+}
+
+export async function refresh(req, res) {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ error: "refreshToken obrigatorio" });
+        }
+
+        const decoded = jwt.verify(refreshToken, getRefreshSecret());
+        const user = await User.findById(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({ error: "Usuario nao encontrado" });
+        }
+
+        const token = signAccessToken(user);
+        const nextRefreshToken = signRefreshToken(user);
+
+        return res.status(200).json({
+            token,
+            refreshToken: nextRefreshToken,
+        });
+    } catch (error) {
+        return res.status(401).json({ error: "Refresh token invalido ou expirado" });
     }
 }
 
