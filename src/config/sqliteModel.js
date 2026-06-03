@@ -142,20 +142,20 @@ function makeDocument(rawData, collection) {
   Object.defineProperties(doc, {
     toObject: {
       enumerable: false,
-      value: () => ({ ...rawData }),
+      value: () => ({ ...doc }),
     },
     toJSON: {
       enumerable: false,
-      value: () => ({ ...rawData }),
+      value: () => ({ ...doc }),
     },
     populate: {
       enumerable: false,
-      value: (spec) => populateDoc({ ...rawData }, spec),
+      value: (spec) => populateDoc({ ...doc }, spec),
     },
     save: {
       enumerable: false,
       value: async () => {
-        if (collection) collection._updateByIdRaw(rawData._id, rawData);
+        if (collection) collection._updateByIdRaw(doc._id, doc);
         return doc;
       },
     },
