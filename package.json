@@ -10,6 +10,10 @@
     "migrate:cpf": "node database/migrations/migrateCpfEncryption.js",
     "migrate:budget-appointment": "node database/migrations/backfillBudgetAppointment.js",
     "migrate:budget-appointment:apply": "node database/migrations/backfillBudgetAppointment.js --apply",
+    "migrate:uploads-folders": "node database/migrations/migrateUploadFoldersToStableIds.js",
+    "migrate:uploads-folders:apply": "node database/migrations/migrateUploadFoldersToStableIds.js --apply",
+    "migrate:uploads-legacy-fix": "node database/migrations/repairLegacyUploadPaths.js",
+    "migrate:uploads-legacy-fix:apply": "node database/migrations/repairLegacyUploadPaths.js --apply",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

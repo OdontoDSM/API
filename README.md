@@ -46,6 +46,8 @@ npm install
 - `npm start`: inicia API em modo normal
 - `npm run seed`: popula base com dados de teste
 - `npm run migrate:cpf`: migra CPFs legados para formato criptografado + hash
+- `npm run migrate:uploads-folders`: dry-run da migracao de uploads para pastas por ID (MongoDB ou SQLite fallback)
+- `npm run migrate:uploads-folders:apply`: aplica migracao de uploads para `uploads/exams/{patientId}/{ano}/{mes}` e `uploads/profile_pics/{userId}` (MongoDB ou SQLite fallback)
 
 ## Fluxo de banco de dados
 

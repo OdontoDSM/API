@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 import multer from "multer";
 import MedicalRecord from "../models/MedicalRecord.js";
-import Patient from "../models/Patient.js";
 import User from "../models/User.js";
 import { isValidDbId } from "../utils/idValidation.js";
 
@@ -12,26 +11,9 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-function slugifyPatientName(name = "") {
-  const normalized = String(name)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .toLowerCase();
-
-  return normalized || "paciente";
-}
-
-function slugifyUserName(name = "") {
-  const normalized = String(name)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .toLowerCase();
-
-  return normalized || "usuario";
+function normalizeEntityId(id, fallback) {
+  const normalized = String(id || "").trim();
+  return normalized || fallback;
 }
 
 function formatUploadDateTime(date) {
@@ -46,48 +28,46 @@ function formatUploadDateTime(date) {
   return `${year}${month}${day}_${hour}${minute}${second}${milli}`;
 }
 
-async function resolvePatientNameFromRequest(req) {
+async function resolvePatientIdFromRequest(req) {
   const medicalRecordId = req.body?.medicalRecord;
 
   if (!medicalRecordId || !isValidDbId(medicalRecordId)) {
-    return "paciente";
+    return "paciente_sem_id";
   }
 
   const medicalRecord = await MedicalRecord.findById(medicalRecordId);
   if (!medicalRecord?.patient) {
-    return "paciente";
+    return "paciente_sem_id";
   }
 
   const patientId = medicalRecord.patient._id || medicalRecord.patient;
-  const patient = await Patient.findById(patientId);
-
-  return slugifyPatientName(patient?.name);
+  return normalizeEntityId(patientId, "paciente_sem_id");
 }
 
-async function resolveUserNameFromRequest(req) {
+async function resolveUserIdFromRequest(req) {
   const userId = req.params?.id || req.userId;
 
   if (!userId || !isValidDbId(userId)) {
-    return "usuario";
+    return "usuario_sem_id";
   }
 
   const user = await User.findById(userId);
-  return slugifyUserName(user?.name);
+  return normalizeEntityId(user?._id || userId, "usuario_sem_id");
 }
 
 const storage = multer.diskStorage({
   destination: (req, _file, cb) => {
-    resolvePatientNameFromRequest(req)
-      .then((patientSlug) => {
+    resolvePatientIdFromRequest(req)
+      .then((patientFolderId) => {
         const uploadDate = new Date();
         const year = String(uploadDate.getFullYear());
         const month = String(uploadDate.getMonth() + 1).padStart(2, "0");
-        const destinationDir = path.join(uploadsDir, patientSlug, year, month);
+        const destinationDir = path.join(uploadsDir, "exams", patientFolderId, year, month);
 
         fs.mkdirSync(destinationDir, { recursive: true });
 
         req.uploadMeta = {
-          patientSlug,
+          patientFolderId,
           uploadDate,
         };
 
@@ -97,11 +77,11 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const extension = path.extname(file.originalname || "").toLowerCase();
-    const patientSlug = req.uploadMeta?.patientSlug || "paciente";
+    const patientFolderId = req.uploadMeta?.patientFolderId || "paciente_sem_id";
     const uploadDate = req.uploadMeta?.uploadDate || new Date();
     const dateTime = formatUploadDateTime(uploadDate);
 
-    cb(null, `${patientSlug}_${dateTime}${extension || ".bin"}`);
+    cb(null, `${patientFolderId}_${dateTime}${extension || ".bin"}`);
   },
 });
 
@@ -131,14 +111,14 @@ export const upload = multer({
 
 const profilePhotoStorage = multer.diskStorage({
   destination: (req, _file, cb) => {
-    resolveUserNameFromRequest(req)
-      .then((userSlug) => {
-        const destinationDir = path.join(uploadsDir, "profile_photo", userSlug);
+    resolveUserIdFromRequest(req)
+      .then((userFolderId) => {
+        const destinationDir = path.join(uploadsDir, "profile_pics", userFolderId);
 
         fs.mkdirSync(destinationDir, { recursive: true });
 
         req.uploadMeta = {
-          userSlug,
+          userFolderId,
           uploadDate: new Date(),
         };
 
@@ -148,11 +128,11 @@ const profilePhotoStorage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const extension = path.extname(file.originalname || "").toLowerCase() || ".jpg";
-    const userSlug = req.uploadMeta?.userSlug || "usuario";
+    const userFolderId = req.uploadMeta?.userFolderId || "usuario_sem_id";
     const uploadDate = req.uploadMeta?.uploadDate || new Date();
     const dateTime = formatUploadDateTime(uploadDate);
 
-    cb(null, `${userSlug}_${dateTime}${extension}`);
+    cb(null, `${userFolderId}_${dateTime}${extension}`);
   },
 });
 

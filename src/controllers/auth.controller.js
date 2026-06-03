@@ -125,6 +125,7 @@ export async function login(req, res){
                 cpf: normalizeCpf(user.cpf),
                 email: user.email,
                 phone: user.phone,
+                profilePhotoUrl: user.profilePhotoUrl,
                 isAdmin: user.isAdmin,
             },
         });
